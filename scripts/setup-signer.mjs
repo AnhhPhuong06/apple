@@ -1,4 +1,4 @@
-import {mkdir,writeFile,chmod,rm} from 'node:fs/promises';
+import {mkdir,writeFile,chmod,rm,copyFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import path from 'node:path';
@@ -17,7 +17,12 @@ await writeFile(archive,bytes);
 if(process.platform==='win32') {
   const quote=value=>"'"+value.replace(/'/g,"''")+"'";
   execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`Expand-Archive -LiteralPath ${quote(archive)} -DestinationPath ${quote(target)} -Force`],{windowsHide:true});
-} else {execFileSync('tar',['-xzf',archive,'-C',target]);await chmod(path.join(target,'zsign'),0o755);}
+} else {
+  execFileSync('tar',['-xzf',archive,'-C',target]);
+  // The pinned Linux archive calls the static binary zsign-musl.
+  await copyFile(path.join(target,'zsign-musl'),path.join(target,'zsign'));
+  await chmod(path.join(target,'zsign'),0o755);
+}
 await rm(archive);
 execFileSync(path.join(target,process.platform==='win32'?'zsign.exe':'zsign'),['--version'],{windowsHide:true,stdio:'pipe',timeout:10000});
 console.log('Installed verified zsign v1.1.3 to tools/zsign.');

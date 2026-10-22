@@ -1,0 +1,12 @@
+node_modules/
+.preview/
+.artifacts/
+*.log
+Thumbs.db
+.DS_Store
+_site/
+data/
+tools/zsign/
+.env
+*.p12
+*.mobileprovision

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Khám phá Ngọc Rồng Hot, xem hình ảnh trò chơi và tải ứng dụng dành cho iPhone, iPad.">
+  <title>Ngọc Rồng Hot — Tải ứng dụng</title>
+  <script>if(new URLSearchParams(location.search).has('job'))document.documentElement.classList.add('loading-app');</script>
+  <link rel="icon" type="image/png" href="assets/app-icon.png">
+  <link rel="apple-touch-icon" href="assets/app-icon.png">
+  <link rel="stylesheet" href="appstore.css">
+  <script src="apps.js" defer></script>
+  <script src="shared.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#app">Đến thông tin ứng dụng</a>
+  <header class="site-header">
+    <nav class="nav-shell page-width" aria-label="Điều hướng chính">
+      <a class="brand" href="index.html" aria-label="AppSpace — Trang ứng dụng"><span class="brand-mark" data-icon="grid"></span>AppSpace</a>
+      <div class="nav-links"><a class="active" href="#app">Trò chơi</a><a href="#preview">Xem trước</a><a href="#guide">Hướng dẫn cài đặt</a></div>
+      <span class="device-label"><span data-icon="phone"></span> Dành cho iPhone & iPad</span>
+    </nav>
+  </header>
+  <main class="page-width">
+    <div class="breadcrumb"><a href="#app"><span data-icon="chevron"></span>Trò chơi</a><span class="breadcrumb-divider">/</span><span>Nhập vai</span><span class="breadcrumb-divider">/</span><span data-app-name>Ngọc Rồng Hot</span></div>
+    <section class="app-hero" id="app" aria-labelledby="app-title">
+      <img class="app-art" src="assets/app-icon.png" alt="Biểu tượng Ngọc Rồng Hot" id="app-icon" width="160" height="160" fetchpriority="high">
+      <div class="app-heading">
+        <span class="hero-eyebrow">MỘT THẾ GIỚI. VÔ VÀN TRẢI NGHIỆM.</span>
+        <h1 id="app-title">Ngọc Rồng Hot</h1>
+        <p class="app-subtitle" id="app-subtitle">Game Nhập Vai Trực Tuyến</p>
+        <div class="app-actions"><button class="get-button" data-install>NHẬN</button><span class="price-caption">Miễn phí<span> Dành cho iPhone & iPad</span></span></div>
+      </div>
+      <button class="share-button" id="share-button" aria-label="Chia sẻ ứng dụng"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M8 10H5v11h14V10h-3"/></svg></button>
+    </section>
+    <section class="app-stats" aria-label="Thông tin nhanh">
+      <div class="stat"><span class="stat-label" id="rating-count">15,4 N ĐÁNH GIÁ</span><strong class="stat-value" id="rating-value">4.9</strong><span class="stars" aria-label="4,9 trên 5 sao">★★★★★</span></div>
+      <div class="stat"><span class="stat-label">ĐỘ TUỔI</span><strong class="stat-value" id="age-value">12+</strong><span class="stat-caption">Tuổi</span></div>
+      <div class="stat developer-stat"><span class="stat-label">NHÀ PHÁT TRIỂN</span><span class="dragon" aria-hidden="true">🐉</span><span class="stat-caption" id="developer-value">Ngọc Rồng Hot Studio</span></div>
+      <div class="stat"><span class="stat-label">DUNG LƯỢNG</span><strong class="stat-value size-value" id="size-value">25 MB</strong><span class="stat-caption">Kích thước</span></div>
+    </section>
+    <section class="preview-section content-section" id="preview" aria-labelledby="preview-title">
+      <div class="section-heading"><h2 id="preview-title">Xem trước</h2><div class="gallery-controls"><span>iPhone & iPad</span><button id="preview-prev" class="round-button" aria-label="Ảnh trước" disabled><span data-icon="chevron"></span></button><button id="preview-next" class="round-button" aria-label="Ảnh tiếp theo"><span data-icon="chevron"></span></button></div></div>
+      <div class="screenshot-track" id="screenshot-track" tabindex="0" aria-label="Ảnh xem trước, vuốt ngang để xem thêm">
+        <button class="screenshot" data-preview="0" aria-label="Phóng to ảnh 1: Khám phá Làng Aru"><img src="assets/preview-1.jpg" alt="Ngọc Rồng Hot — chọn khu vực và khám phá Làng Aru" width="960" height="540"></button>
+        <button class="screenshot" data-preview="1" aria-label="Phóng to ảnh 2: Phiêu lưu tại Đảo Kame"><img src="assets/preview-2.jpg" alt="Ngọc Rồng Hot — phiêu lưu cùng bạn bè tại Đảo Kame" width="960" height="540"></button>
+        <button class="screenshot" data-preview="2" aria-label="Phóng to ảnh 3: Thế giới Ngọc Rồng"><img src="assets/preview-3.jpg" alt="Ngọc Rồng Hot — khám phá thế giới và các nhân vật" width="960" height="540" loading="lazy"></button>
+      </div>
+      <span class="preview-hint"><span data-icon="phone"></span>Trải nghiệm thế giới Ngọc Rồng ngay trên thiết bị của bạn.</span>
+    </section>
+    <section class="content-section updates-section" aria-labelledby="updates-title">
+      <div class="section-heading"><h2 id="updates-title">Có gì mới</h2><span class="version-label">Phiên bản <span data-version>1.0.0</span></span></div>
+      <ul class="release-notes" id="release-notes"><li>Cải thiện hiệu năng và tốc độ tải game.</li><li>Sửa một số lỗi nhỏ liên quan đến giao diện.</li><li>Tối ưu hóa trải nghiệm trên các dòng iPhone mới.</li></ul>
+    </section>
+    <section class="content-section description-section" aria-labelledby="description-title">
+      <h2 id="description-title">Một hành trình quen thuộc.<br class="desktop-only"> Những trải nghiệm mới.</h2>
+      <div class="description-copy"><p id="app-description">Trở lại thế giới Ngọc Rồng, nơi hành trình tuổi thơ bắt đầu. Cùng bạn bè luyện tập, khám phá những vùng đất mới và chinh phục các thử thách trong thế giới nhập vai đầy màu sắc.</p><div id="description-extra" hidden><p>Hóa thân thành chiến binh, phát triển kỹ năng và tạo nên câu chuyện của riêng bạn. Những trận đấu sôi động và hành trình phiêu lưu đang chờ bạn khám phá.</p></div><button class="text-button" id="description-toggle" aria-expanded="false" aria-controls="description-extra">Xem thêm <span data-icon="chevron"></span></button><div class="game-tags"><span>Nhập vai</span><span>Phiêu lưu</span><span>Chơi cùng bạn bè</span></div></div>
+    </section>
+    <div class="details-layout">
+      <section class="content-section information-section" id="information" aria-labelledby="information-title">
+        <h2 id="information-title">Thông tin</h2>
+        <dl class="information-list"><div><dt>Nhà cung cấp</dt><dd data-developer>Ngọc Rồng Hot Studio</dd></div><div><dt>Kích cỡ</dt><dd data-size>25 MB</dd></div><div><dt>Danh mục</dt><dd>Trò chơi · Nhập vai</dd></div><div><dt>Tương thích</dt><dd id="compatibility">iOS 12.0 trở lên</dd></div><div><dt>Ngôn ngữ</dt><dd>Tiếng Việt</dd></div><div><dt>Độ tuổi</dt><dd id="info-age">12+</dd></div><div><dt>Giá</dt><dd class="free-value">Miễn phí</dd></div></dl>
+      </section>
+      <section class="content-section guide-section" id="guide" aria-labelledby="guide-title">
+        <h2 id="guide-title">Sẵn sàng cho cuộc phiêu lưu?</h2><p class="guide-lead">Cài đặt đơn giản. Bắt đầu trải nghiệm.</p>
+        <ol class="install-steps"><li><span>1</span><div><strong>Nhấn “NHẬN”</strong><p>Mở yêu cầu cài đặt ứng dụng.</p></div></li><li><span>2</span><div><strong>Xác nhận cài đặt</strong><p>Chọn “Cài đặt” và làm theo thông báo trên iPhone.</p></div></li><li><span>3</span><div><strong>Mở ứng dụng và khám phá</strong><p>Chờ biểu tượng ứng dụng xuất hiện trên màn hình chính.</p></div></li></ol>
+        <details class="install-help"><summary>Cần hỗ trợ cài đặt?<span data-icon="chevron"></span></summary><p>Hãy mở trang bằng Safari trên iPhone hoặc iPad. Nếu thiết bị yêu cầu tin cậy nhà phát triển, vào <strong>Cài đặt → Cài đặt chung → VPN & Quản lý thiết bị</strong>, kiểm tra nhà phát triển rồi làm theo hướng dẫn. Khả năng cài đặt phụ thuộc vào bản ứng dụng và thiết bị được hỗ trợ.</p></details>
+        <a class="text-button direct-download" id="direct-download" hidden><span data-icon="download"></span>Tải file IPA</a>
+      </section>
+    </div>
+    <div class="bottom-app"><img src="assets/app-icon.png" alt="" width="48" height="48" id="bottom-icon"><div><strong data-app-name>Ngọc Rồng Hot</strong><span>Cuộc phiêu lưu tiếp theo của bạn.</span></div><button class="get-button" data-install>NHẬN</button></div>
+    <noscript><p class="noscript-message">Hãy bật JavaScript để sử dụng nút cài đặt và xem ảnh phóng to.</p></noscript>
+  </main>
+  <footer class="site-footer"><div class="page-width footer-inner"><a class="brand footer-brand" href="index.html"><span class="brand-mark" data-icon="grid"></span>AppSpace</a><span>Trang phân phối ứng dụng độc lập.</span><span>Dành cho iPhone & iPad</span></div></footer>
+  <dialog class="install-dialog" id="install-dialog" aria-labelledby="install-title" aria-describedby="install-description">
+    <form method="dialog"><button class="dialog-close" aria-label="Đóng hộp thoại" value="cancel"><span data-icon="close"></span></button></form>
+    <img class="install-app-icon" src="assets/app-icon.png" alt="" id="install-icon" width="72" height="72">
+    <p class="dialog-eyebrow">CÀI ĐẶT ỨNG DỤNG</p><h2 id="install-title">Cài đặt Ngọc Rồng Hot?</h2>
+    <p class="install-description" id="install-description">Bạn có muốn cài đặt ứng dụng này trên thiết bị của mình không?</p>
+    <div class="install-meta"><span data-icon="phone"></span>iPhone & iPad<span class="meta-dot">·</span><span data-size>25 MB</span><span class="meta-dot">·</span>Miễn phí</div>
+    <p class="install-status" id="install-status" role="status" hidden></p>
+    <div class="dialog-actions"><button class="cancel-button" id="cancel-install">Hủy</button><button class="confirm-button" id="confirm-install">Cài đặt</button></div>
+    <p class="dialog-footnote">Chỉ cài đặt ứng dụng từ nhà phát triển bạn tin cậy.</p>
+  </dialog>
+  <dialog class="lightbox" id="preview-dialog" aria-label="Ảnh xem trước phóng to"><div class="lightbox-toolbar"><span id="preview-counter">1 / 3</span><button class="lightbox-close" aria-label="Đóng ảnh"><span data-icon="close"></span></button></div><img id="lightbox-image" src="assets/preview-1.jpg" alt=""><div class="lightbox-controls"><button class="round-button" id="lightbox-prev" aria-label="Ảnh trước"><span data-icon="chevron"></span></button><span>Ảnh xem trước</span><button class="round-button" id="lightbox-next" aria-label="Ảnh tiếp theo"><span data-icon="chevron"></span></button></div></dialog>
+  <dialog class="share-dialog" id="share-dialog" aria-labelledby="share-title"><form method="dialog"><button class="dialog-close" aria-label="Đóng"><span data-icon="close"></span></button></form><h2 id="share-title">Chia sẻ ứng dụng</h2><p>Gửi cuộc phiêu lưu này đến bạn bè.</p><label for="share-url">Liên kết ứng dụng</label><input id="share-url" type="url" readonly><button class="confirm-button" id="copy-link">Sao chép liên kết</button></dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

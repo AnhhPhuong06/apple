@@ -1,0 +1,22 @@
+{
+  "id": "be129a29-1376-48ff-841e-d214a0a9918d",
+  "name": "Nro Han",
+  "version": "0.0.3",
+  "buildVersion": "0.0.3",
+  "bundleId": "jp.co.rakuten-sec.iSPEED.Pushnotification.widgetapp.widgetkitextension",
+  "minimumIOS": "12.0",
+  "subtitle": "Ứng dụng dành cho iPhone & iPad",
+  "description": "",
+  "category": "Giải trí",
+  "developer": "AnhhPhuongg",
+  "icon": "sparkles",
+  "color": "blue",
+  "iconImage": "https://anhhphuong06.github.io/apple/files/be129a29-1376-48ff-841e-d214a0a9918d/icon.png",
+  "screenshots": [],
+  "size": 40407855,
+  "releaseNotes": [],
+  "file": "https://anhhphuong06.github.io/apple/files/be129a29-1376-48ff-841e-d214a0a9918d/app.ipa",
+  "manifestUrl": "https://anhhphuong06.github.io/apple/files/be129a29-1376-48ff-841e-d214a0a9918d/manifest.plist",
+  "sample": false,
+  "generated": true
+}

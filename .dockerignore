@@ -1,0 +1,10 @@
+node_modules
+.preview
+.git
+data
+tools/zsign
+.env
+*.p12
+*.mobileprovision
+_site
+downloads

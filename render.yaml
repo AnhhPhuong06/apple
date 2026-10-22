@@ -1,0 +1,30 @@
+# Paid service: 1 CPU / 2 GB RAM plus 10 GB persistent storage.
+# Current base price is $25 + $2.50 / month; confirm pricing in Render before deploying.
+services:
+  - type: web
+    name: appspace-admin
+    runtime: node
+    repo: https://github.com/AnhhPhuong06/apple
+    branch: main
+    region: singapore
+    plan: 1c-2g
+    numInstances: 1
+    buildCommand: npm ci --omit=dev && npm run setup:signer
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /var/data/appspace
+      - key: ADMIN_TOKEN
+        generateValue: true
+    disk:
+      name: appspace-data
+      mountPath: /var/data
+      sizeGB: 10

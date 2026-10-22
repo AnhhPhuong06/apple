@@ -7,14 +7,15 @@ import {fileURLToPath} from 'node:url';
 import {validateArchive,readAppInfo,runZsign,signArguments,manifestXML} from './signing.mjs';
 import {createAdminAuth} from './auth.mjs';
 import {listPublishedApps} from './catalog.mjs';
+import {prepareAppIcon} from './images.mjs';
+import {publicOrigin} from './config.mjs';
 
 export const root=fileURLToPath(new URL('../',import.meta.url));
 export async function createApp(options={}) {
   const port=Number(options.port || process.env.PORT || 4173);
   const host=options.host || process.env.HOST || '127.0.0.1';
   const token=options.token ?? process.env.ADMIN_TOKEN ?? '';
-  const configuredBase=(options.baseURL ?? process.env.PUBLIC_BASE_URL ?? '').replace(/\/$/,'');
-  if(configuredBase) { const u=new URL(configuredBase); if(u.protocol!=='https:' || u.username || u.password || u.search || u.hash || u.pathname!=='/') throw new Error('PUBLIC_BASE_URL phải là tên miền HTTPS, không có đường dẫn.'); }
+  const configuredBase=publicOrigin(options.baseURL);
   const baseURL=configuredBase || `http://127.0.0.1:${port}`;
   const data=path.resolve(options.dataDir || process.env.DATA_DIR || path.join(root,'data'));
   const privateRoot=path.join(data,'private'), publicRoot=path.join(data,'published');
@@ -28,6 +29,7 @@ export async function createApp(options={}) {
   if(options.signer) signerReady=true;
   const app=express(); app.disable('x-powered-by');
   app.use((req,res,next)=>{res.set('X-Content-Type-Options','nosniff');res.set('Referrer-Policy','same-origin');res.set('X-Frame-Options','DENY');next();});
+  app.get('/healthz',(req,res)=>res.set('Cache-Control','no-store').status(signerReady?200:503).json({status:signerReady?'ok':'unavailable'}));
   const auth=await createAdminAuth({token,data,baseURL,port,secure:!!configuredBase,root});
   const {admin}=auth;
   auth.mount(app);
@@ -48,7 +50,7 @@ export async function createApp(options={}) {
   const storage=multer.diskStorage({destination:(req,file,cb)=>cb(null,req.work),filename:(req,file,cb)=>cb(null,randomUUID()+path.extname(file.originalname).toLowerCase())});
   const upload=multer({storage,limits:{fileSize:512*1024**2,files:9,fields:12,fieldSize:12000,parts:21},fileFilter:(req,file,cb)=>{
     const ext=path.extname(file.originalname).toLowerCase();
-    const extensions={ipa:['.ipa'],p12:['.p12'],profile:['.mobileprovision'],icon:['.png'],screenshots:['.png','.jpg','.jpeg']};
+    const extensions={ipa:['.ipa'],p12:['.p12'],profile:['.mobileprovision'],icon:['.png','.jpg','.jpeg'],screenshots:['.png','.jpg','.jpeg']};
     cb(extensions[file.fieldname]?.includes(ext)?null:new Error('Định dạng tệp không phù hợp.'),true);
   }}).fields([{name:'ipa',maxCount:1},{name:'p12',maxCount:1},{name:'profile',maxCount:1},{name:'icon',maxCount:1},{name:'screenshots',maxCount:5}]);
   const clearWork=async(work)=>{if(path.dirname(path.resolve(work))!==privateRoot) throw new Error('Unsafe private cleanup');await rm(work,{recursive:true,force:true});};
@@ -73,7 +75,11 @@ export async function createApp(options={}) {
           if(image.size>8*1024**2) throw new Error('Mỗi ảnh tối đa 8 MB.');
           const bytes=await readFile(image.path); const png=bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])); const jpg=bytes[0]===255 && bytes[1]===216 && bytes[2]===255;
           if((path.extname(image.path)==='.png' && !png) || (path.extname(image.path)!=='.png' && !jpg)) throw new Error('Ảnh không đúng định dạng PNG/JPEG.');
-          if(image.fieldname==='icon' && (bytes.length<24 || bytes.readUInt32BE(16)!==bytes.readUInt32BE(20) || bytes.readUInt32BE(16)>2048)) throw new Error('Icon cần là ảnh PNG vuông, tối đa 2048 px.');
+          if(image.fieldname==='icon') {
+            const normalized=path.join(req.work,'normalized-icon.png');
+            await prepareAppIcon(image.path,normalized);
+            image.path=normalized;
+          }
         }
         await validateArchive(files.ipa[0].path);
         const work=req.work; const password=body.password; delete body.password;

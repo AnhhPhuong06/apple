@@ -19,4 +19,5 @@ if(process.platform==='win32') {
   execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`Expand-Archive -LiteralPath ${quote(archive)} -DestinationPath ${quote(target)} -Force`],{windowsHide:true});
 } else {execFileSync('tar',['-xzf',archive,'-C',target]);await chmod(path.join(target,'zsign'),0o755);}
 await rm(archive);
+execFileSync(path.join(target,process.platform==='win32'?'zsign.exe':'zsign'),['--version'],{windowsHide:true,stdio:'pipe',timeout:10000});
 console.log('Installed verified zsign v1.1.3 to tools/zsign.');

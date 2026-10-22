@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import yazl from 'yazl';
 import * as plist from 'plist';
+import sharp from 'sharp';
 import {createApp} from '../server/app.mjs';
 import {validateArchive,readAppInfo,manifestXML,signArguments} from '../server/signing.mjs';
 
@@ -21,6 +22,28 @@ test('reject unsafe archives, accept one app, and read actual build version',asy
   const link=path.join(dir,'link.ipa');await writeFile(link,await zip([['Payload/A.app/Info.plist','a'],['Payload/A.app/link','../../secret',{mode:0o120777}]]));await assert.rejects(validateArchive(link),/liên kết/);
   const traversal=path.join(dir,'traversal.ipa');const bytes=await zip([['Payload/A.app/Info.plist','a'],['bad/file','x']]);await writeFile(traversal,Buffer.from(bytes.toString('latin1').replaceAll('bad/file','../filex'),'latin1'));await assert.rejects(validateArchive(traversal));
  }finally{await rm(dir,{recursive:true,force:true});}
+});
+
+test('signing API converts uploaded JPG/PNG icons and keeps JPG/PNG screenshots',async()=>{
+ const dir=await mkdtemp(path.join(os.tmpdir(),'appspace-image-api-'));const token='image-api-admin-token-123456789';let calls=0;
+ const signer=async(args,work)=>{
+  calls++;const iconPath=args[args.indexOf('-I')+1];const icon=await sharp(iconPath).metadata();assert.equal(icon.format,'png');assert.equal(icon.width,1024);assert.equal(icon.height,1024);
+  await writeFile(path.join(work,'result','app.ipa'),await ipa());await writeFile(path.join(work,'metadata','metadata.json'),JSON.stringify({IconName:''}));
+ };
+ const {app}=await createApp({dataDir:dir,token,baseURL:'https://images.example.test',signer});const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port,headers={Authorization:'Bearer '+token};
+ const jpg=await sharp({create:{width:120,height:80,channels:3,background:'red'}}).jpeg().toBuffer();const png=await sharp({create:{width:80,height:120,channels:4,background:'blue'}}).png().toBuffer();
+ try {
+  for(const [ext,buffer] of [['JPG',jpg],['jpeg',jpg],['png',png]]) {
+   const data=form(await ipa());data.append('icon',new Blob([buffer]),'icon.'+ext);data.append('screenshots',new Blob([jpg]),'screen.jpeg');data.append('screenshots',new Blob([png]),'screen.png');
+   const response=await fetch(base+'/api/sign',{method:'POST',headers,body:data});assert.equal(response.status,202);const {id}=await response.json();let job;
+   for(let i=0;i<200;i++){job=await (await fetch(base+'/api/jobs/'+id,{headers})).json();if(job.status!=='signing')break;await pause();}assert.equal(job.status,'complete',job.error);
+   const record=await (await fetch(base+'/api/apps/'+id)).json();assert.match(record.iconImage,/\/icon\.png$/);assert.equal(record.screenshots.length,2);assert.match(record.screenshots[0],/\.jpg$/);assert.match(record.screenshots[1],/\.png$/);
+   const output=Buffer.from(await (await fetch(base+`/files/${id}/icon.png`)).arrayBuffer());assert.equal((await sharp(output).metadata()).format,'png');
+   for(let i=0;i<100&&(await readdir(path.join(dir,'private'))).length;i++)await pause();
+  }
+  const bad=form(await ipa());bad.append('icon',new Blob([Buffer.from([255,216,255,0])]),'bad.jpg');assert.equal((await fetch(base+'/api/sign',{method:'POST',headers,body:bad})).status,400);assert.equal(calls,3);assert.deepEqual(await readdir(path.join(dir,'private')),[]);
+  const health=await fetch(base+'/healthz');assert.equal(health.status,200);assert.deepEqual(await health.json(),{status:'ok'});assert.equal((await fetch(base+'/api/health')).status,401);
+ } finally {await new Promise(resolve=>server.close(resolve));await rm(dir,{recursive:true,force:true});}
 });
 
 test('manifest escapes values and signing options stay individual arguments',()=>{

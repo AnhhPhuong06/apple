@@ -29,7 +29,7 @@ Trong admin, phần **Ứng dụng đã tạo** liệt kê các bản ký đã l
 ## Quy trình sử dụng
 
 1. Đăng nhập `/admin`, chọn IPA, `.p12`, `.mobileprovision`; nhập mật khẩu của chứng chỉ nếu có.
-2. Có thể đổi tên, Bundle ID, phiên bản và icon PNG. Bỏ trống để giữ giá trị trong IPA. Bundle ID và thiết bị phải phù hợp với hồ sơ cấp phép.
+2. Có thể đổi tên, Bundle ID, phiên bản và icon **JPG/JPEG hoặc PNG**. Icon được tự xoay đúng chiều, cắt vuông ở giữa và chuyển thành PNG 1024×1024 cho iOS; tối đa 8 MB và 16 megapixel. Bỏ trống để giữ icon trong IPA. Bundle ID và thiết bị phải phù hợp với hồ sơ cấp phép.
 3. Nhập nhà phát triển, danh mục, mô tả, nội dung “Có gì mới”, và tối đa 5 ảnh xem trước.
 4. Nhấn **Ký & tạo trang cài đặt**. Trang hiển thị tiến độ tải tệp và trạng thái ký.
 5. Khi hoàn tất, sao chép link trang cài đặt hoặc tải IPA đã ký. Mỗi lần ký thành công có một link riêng `index.html?job=<id>`.
@@ -63,6 +63,26 @@ Khi chưa có `PUBLIC_BASE_URL`, hệ thống vẫn ký và cho tải IPA, nhưn
 - Giới hạn: một phiên ký tại một thời điểm; IPA tối đa 512 MB, tối đa 2 GB sau giải nén; mỗi ảnh tối đa 8 MB. ZIP có đường dẫn vượt thư mục, symlink, tên trùng hoặc mã hóa bị từ chối trước khi gọi zsign.
 
 ## Triển khai
+
+### Đưa admin lên Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FAnhhPhuong06%2Fapple)
+
+Cấu hình trong `render.yaml` tạo **một Web Service Node.js ở Singapore, 1 CPU / 2 GB RAM và ổ dữ liệu 10 GB**. Chi phí cơ bản theo [bảng giá Render](https://render.com/pricing), kiểm tra ngày 23/10/2026: **25 USD/tháng + 2,50 USD/tháng ổ lưu trữ**, chưa gồm thuế và băng thông vượt hạn mức. Bạn xem và xác nhận chi phí trên Render trước khi tạo dịch vụ; cấu hình này không phải gói miễn phí.
+
+1. Bấm **Deploy to Render** ở trên, đăng nhập bằng GitHub và cho Render truy cập repo `AnhhPhuong06/apple`.
+2. Kiểm tra cấu hình dịch vụ/chi phí, rồi xác nhận triển khai Blueprint. Build tự cài Node.js và zsign; không cần tải chứng chỉ lên GitHub.
+3. Khi dịch vụ báo **Live**, mở mục **Environment** của dịch vụ, xem giá trị `ADMIN_TOKEN`. Đây là mật khẩu đăng nhập admin; không chia sẻ giá trị này.
+4. Mở địa chỉ HTTPS của dịch vụ và thêm `/admin`, ví dụ `https://appspace-admin-xxxx.onrender.com/admin`. Tên miền thực tế do Render cấp.
+5. Nhập `ADMIN_TOKEN`, tải IPA/chứng chỉ và ký như trên máy. App mới có link cài công khai trên cùng tên miền, không cần khách đăng nhập.
+
+Ứng dụng tự nhận `RENDER_EXTERNAL_URL` do Render cung cấp để tạo link HTTPS, manifest và cookie đăng nhập. Nếu dùng tên miền riêng, thêm domain trong Render và đặt `PUBLIC_BASE_URL` tương ứng trước khi ký app. Tham khảo [biến môi trường của Render](https://render.com/docs/environment-variables).
+
+`DATA_DIR=/var/data/appspace` nằm trên ổ bền vững nên app đã ký được giữ qua lần triển khai/khởi động lại. Admin được bảo vệ bằng mật khẩu tự sinh; `/healthz` chỉ trả tình trạng sẵn sàng cho Render, không cung cấp quyền admin. Blueprint tắt tự triển khai khi push để tránh ngắt phiên ký; sau khi cập nhật mã, dùng **Manual Deploy → Deploy latest commit** lúc không có phiên ký.
+
+Máy chủ mới bắt đầu với danh sách app trống; dữ liệu riêng từ máy cá nhân không tự chuyển lên. Các app đang trên GitHub Pages vẫn dùng link cũ. Dịch vụ Render chỉ được tạo khi bạn thực hiện bước xác nhận trong tài khoản Render.
+
+### GitHub Pages và máy chủ riêng
 
 Đây là ứng dụng **Node.js có backend**. GitHub Pages phục vụ trang cài đặt và bản IPA đã xuất, còn trang admin/ký app chạy trên máy chủ Node.js. Workflow `pages.yml` kiểm tra và triển khai giao diện công khai lên **https://anhhphuong06.github.io/apple/** khi push nhánh `main`.
 

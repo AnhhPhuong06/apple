@@ -7,7 +7,7 @@ import vm from 'node:vm';
 import '../ipa-validator.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const scripts = ['apps.js','shared.js','app.js','manage.js','sign.js','admin-login.js','server/auth.mjs','server/app.mjs','server/index.mjs','server/signing.mjs','ipa-validator.js','scripts/setup-signer.mjs','scripts/preview.mjs','scripts/build.mjs','scripts/export-pages.mjs'];
+const scripts = ['apps.js','shared.js','app.js','manage.js','sign.js','admin-apps.js','catalog.js','admin-login.js','server/catalog.mjs','server/auth.mjs','server/app.mjs','server/index.mjs','server/signing.mjs','ipa-validator.js','scripts/setup-signer.mjs','scripts/preview.mjs','scripts/build.mjs','scripts/export-pages.mjs'];
 for(const file of scripts) execFileSync(process.execPath, ['--check', path.join(root,file)], {stdio:'pipe'});
 const source = await readFile(path.join(root,'apps.js'),'utf8');
 const match = source.match(/^\s*window\.APP_CATALOG\s*=\s*([\s\S]+?);?\s*$/);
@@ -41,7 +41,7 @@ for(const app of apps) {
     await stat(path.join(root,asset));
   }
 }
-for(const name of ['index.html','manage.html','sign.html','admin-login.html']) {
+for(const name of ['index.html','catalog.html','manage.html','sign.html','admin-login.html']) {
   const html = await readFile(path.join(root,name),'utf8');
   for(const entry of html.replace(/<base\b[^>]*>/g,'').matchAll(/(?:src|href)="([^"#]+)"/g)) {
     const link = entry[1];

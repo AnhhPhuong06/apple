@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Khám phá Ngọc Rồng Hot, xem hình ảnh trò chơi và tải ứng dụng dành cho iPhone, iPad.">
   <title>Ngọc Rồng Hot — Tải ứng dụng</title>
-  <script>if(new URLSearchParams(location.search).has('job'))document.documentElement.classList.add('loading-app');</script>
+  <script>const appParams=new URLSearchParams(location.search);if(!appParams.has('job')&&!appParams.has('app')&&!appParams.has('demo')){document.documentElement.classList.add('loading-app');location.replace('catalog.html');}else if(appParams.has('job'))document.documentElement.classList.add('loading-app');</script>
   <link rel="icon" type="image/png" href="assets/app-icon.png">
   <link rel="apple-touch-icon" href="assets/app-icon.png">
   <link rel="stylesheet" href="appstore.css">
@@ -18,13 +18,13 @@
   <a class="skip-link" href="#app">Đến thông tin ứng dụng</a>
   <header class="site-header">
     <nav class="nav-shell page-width" aria-label="Điều hướng chính">
-      <a class="brand" href="index.html" aria-label="AppSpace — Trang ứng dụng"><span class="brand-mark" data-icon="grid"></span>AppSpace</a>
+      <a class="brand" href="catalog.html" aria-label="AppSpace — Kho ứng dụng"><span class="brand-mark" data-icon="grid"></span>AppSpace</a>
       <div class="nav-links"><a class="active" href="#app">Trò chơi</a><a href="#preview">Xem trước</a><a href="#guide">Hướng dẫn cài đặt</a></div>
       <span class="device-label"><span data-icon="phone"></span> Dành cho iPhone & iPad</span>
     </nav>
   </header>
   <main class="page-width">
-    <div class="breadcrumb"><a href="#app"><span data-icon="chevron"></span>Trò chơi</a><span class="breadcrumb-divider">/</span><span>Nhập vai</span><span class="breadcrumb-divider">/</span><span data-app-name>Ngọc Rồng Hot</span></div>
+    <div class="breadcrumb"><a href="catalog.html"><span data-icon="chevron"></span>Tất cả ứng dụng</a><span class="breadcrumb-divider">/</span><span data-app-name>Ngọc Rồng Hot</span></div>
     <section class="app-hero" id="app" aria-labelledby="app-title">
       <img class="app-art" src="assets/app-icon.png" alt="Biểu tượng Ngọc Rồng Hot" id="app-icon" width="160" height="160" fetchpriority="high">
       <div class="app-heading">

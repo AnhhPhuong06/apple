@@ -6,6 +6,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {validateArchive,readAppInfo,runZsign,signArguments,manifestXML} from './signing.mjs';
 import {createAdminAuth} from './auth.mjs';
+import {listPublishedApps} from './catalog.mjs';
 
 export const root=fileURLToPath(new URL('../',import.meta.url));
 export async function createApp(options={}) {
@@ -31,6 +32,8 @@ export async function createApp(options={}) {
   const {admin}=auth;
   auth.mount(app);
   app.get('/api/health',admin,(req,res)=>res.json({signerReady,otaReady:!!configuredBase,maxUploadMB:512,busy}));
+  app.get('/api/admin/apps',admin,async(req,res)=>res.json({apps:await listPublishedApps(publicRoot)}));
+  app.get('/api/apps',async(req,res)=>res.set('Cache-Control','no-store').json({apps:await listPublishedApps(publicRoot)}));
   app.get('/api/jobs/:id',admin,(req,res)=>{const job=jobs.get(req.params.id);return job?res.json(job):res.status(404).json({error:'Không tìm thấy phiên ký. Nếu máy chủ vừa khởi động lại, hãy dùng link trang cài đã lưu.'});});
   const validID=id=>/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id);
   app.get('/api/apps/:id',async(req,res)=>{
@@ -94,6 +97,7 @@ export async function createApp(options={}) {
           for(const [index,image] of (files.screenshots || []).entries()) {const ext=path.extname(image.path)==='.png'?'png':'jpg';const filename=`preview-${index}.${ext}`;await copyFile(image.path,path.join(result,filename));screenshots.push(`${baseURL}/files/${id}/${filename}`);}
           if(typeof buildVersion!=='string' || !buildVersion) throw new Error('Ứng dụng thiếu CFBundleVersion để tạo manifest.');
           const record={id,name,version,buildVersion,bundleId,minimumIOS:info.MinimumOSVersion || null,subtitle:settings.subtitle || 'Ứng dụng dành cho iPhone & iPad',description:settings.description,category:settings.category,developer:settings.developer || 'Nhà phát triển ứng dụng',iconImage,screenshots,size:signed.size,releaseNotes:settings.releaseNotes.split('\n').filter(Boolean),file:`${baseURL}/files/${id}/app.ipa`,manifestUrl:configuredBase?`${baseURL}/files/${id}/manifest.plist`:null,sample:false,generated:true,installUnavailable:!configuredBase?'Trang đang chạy cục bộ. Cần tên miền HTTPS để cài trực tiếp trên iPhone.':null};
+          record.createdAt=Date.now();
           await writeFile(path.join(result,'app.json'),JSON.stringify(record,null,2));
           await writeFile(path.join(result,'manifest.plist'),manifestXML({baseURL,id,bundleId,version:buildVersion,name}));
           await rename(result,path.join(publicRoot,id));
@@ -103,8 +107,10 @@ export async function createApp(options={}) {
       } catch(error) {busy=false;await clearWork(req.work);if(!res.headersSent) res.status(400).json({error:error.message});}
     });
   });
-  const publicFiles=['index.html','appstore.css','app.js','apps.js','shared.js','favicon.svg','sign.css','sign.js','admin-login.css','admin-login.js'];
-  app.get('/',(req,res)=>res.sendFile(path.join(root,'index.html')));
+  const publicFiles=['index.html','appstore.css','app.js','apps.js','shared.js','favicon.svg','sign.css','sign.js','admin-apps.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
+  const catalogPage=async(req,res)=>res.set('Cache-Control','no-store').type('html').send((await readFile(path.join(root,'catalog.html'),'utf8')).replace('data-source="static"','data-source="server"'));
+  app.get('/',(req,res,next)=>req.query.job || req.query.app?res.sendFile(path.join(root,'index.html')):catalogPage(req,res).catch(next));
+  app.get('/catalog.html',catalogPage);
   app.get('/admin',auth.page,(req,res)=>res.sendFile(path.join(root,'sign.html')));
   app.get(['/sign.html','/manage.html'],(req,res)=>res.redirect('/admin'));
   app.get('/apple',(req,res)=>res.redirect('/index.html'));

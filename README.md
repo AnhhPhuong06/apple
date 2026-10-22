@@ -20,6 +20,10 @@ Trang ký và các API ký, trạng thái phiên, trạng thái công cụ đề
 
 Trang cài `index.html?job=<id>`, thông tin app, ảnh, manifest và IPA đầu ra đều công khai: người nhận link không cần tài khoản, chứng chỉ hay mật khẩu admin. Trang công khai không có nút ký app hoặc liên kết quản trị.
 
+Trang chủ và `catalog.html` là kho ứng dụng: mỗi app có tên, icon, phiên bản và link cài riêng, hỗ trợ tìm kiếm không dấu, lọc danh mục và sắp xếp. Danh sách chỉ hiển thị app thật đã ký trên máy chủ, hoặc các app đã xuất khi chạy trên Pages. Không có app thì hiển thị trạng thái trống.
+
+Trong admin, phần **Ứng dụng đã tạo** liệt kê các bản ký đã lưu. Bạn có thể tìm app, mở trang cài và sao chép link; danh sách vẫn có sau khi khởi động lại. Nút **Tạo app mới** xóa thông tin trong biểu mẫu để nhập app tiếp theo, giữ nguyên các bản ký trước. Mỗi lần ký tạo UUID mới, nên ngay cả hai bản cùng tên cũng có link riêng.
+
 `setup:signer` tải **zsign v1.1.3** từ kho phát hành chính thức, xác minh SHA-256 trước khi giải nén. Hỗ trợ tự cài trên Windows x64 và Linux x64. Nền tảng khác có thể cài [zsign](https://github.com/zhlynn/zsign/tree/v1.1.3) và đặt `ZSIGN_BIN` đến file thực thi.
 
 ## Quy trình sử dụng
@@ -70,6 +74,8 @@ git add public-apps
 git commit -m "Publish signed app"
 git push
 ```
+
+Để xuất tất cả app đã ký cùng lúc, dùng `npm run export:pages -- all https://anhhphuong06.github.io/apple`, rồi commit/push thư mục `public-apps`. Việc ký thêm app không tự push lên GitHub; danh sách Pages cập nhật sau khi xuất và triển khai.
 
 Công cụ chỉ chép IPA đã ký, ảnh, metadata công khai và tạo manifest HTTPS vào `public-apps/<id>`. Dữ liệu ký riêng tư vẫn nằm trong `data/` và không được đưa lên GitHub. Build chuyển dữ liệu công khai này sang `files/<id>/` và danh sách app tĩnh, nên link `index.html?job=<id>` không cần API hay đăng nhập. IPA lớn hơn 95 MiB cần lưu trên GitHub Releases hoặc máy chủ HTTPS riêng.
 

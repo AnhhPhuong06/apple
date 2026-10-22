@@ -8,7 +8,7 @@ if(output !== path.join(root,'_site') || !output.startsWith(root + path.sep)) th
 try { if((await lstat(output)).isSymbolicLink()) throw new Error('Build output may not be a symlink.'); } catch(error) { if(error.code !== 'ENOENT') throw error; }
 await rm(output, {recursive:true,force:true});
 await mkdir(path.join(output,'downloads'), {recursive:true});
-const files = ['index.html','appstore.css','favicon.svg','apps.js','shared.js','app.js','.nojekyll','README.md'];
+const files = ['index.html','catalog.html','catalog.css','catalog.js','appstore.css','favicon.svg','apps.js','shared.js','app.js','.nojekyll','README.md'];
 for(const file of files) await copyFile(path.join(root,file), path.join(output,file));
 await cp(path.join(root,'assets'), path.join(output,'assets'), {recursive:true});
 const source = await readFile(path.join(root,'apps.js'),'utf8');
@@ -32,5 +32,5 @@ for(const entry of entries) {
   }
   exported.push(record);
 }
-if(exported.length)await writeFile(path.join(output,'apps.js'),'window.APP_CATALOG = '+JSON.stringify(exported,null,2)+';\n');
+if(exported.length)await writeFile(path.join(output,'apps.js'),'window.APP_CATALOG = '+JSON.stringify(exported.sort((a,b)=>(b.createdAt || 0)-(a.createdAt || 0) || a.name.localeCompare(b.name)),null,2)+';\n');
 console.log(`Static site prepared in ${output}`);

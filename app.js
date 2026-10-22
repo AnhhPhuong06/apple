@@ -4,6 +4,7 @@
   const {isIPAUrl, isHTTPSUrl, formatSize} = window.AppSpace;
   const catalog = Array.isArray(window.APP_CATALOG) ? window.APP_CATALOG : [];
   const params = new URLSearchParams(location.search);
+  if(!params.has('job') && !params.has('app') && !params.has('demo'))return;
   let app = catalog.find((item) => item.id === params.get('app')) || catalog.find((item) => item && !item.sample) || catalog.find((item) => item) || {};
   const publishedApp = params.has('job') ? catalog.find(item => item.id === params.get('job') && item.generated) : null;
   if (publishedApp) app = publishedApp;
@@ -17,7 +18,7 @@
       const main = document.querySelector('main'); main.replaceChildren();
       const heading = document.createElement('h1'); heading.textContent = 'Không tìm thấy ứng dụng.';
       const message = document.createElement('p'); message.textContent = 'Liên kết không còn tồn tại hoặc máy chủ chưa sẵn sàng. Hãy kiểm tra lại link từ người chia sẻ.';
-      const link = document.createElement('a'); link.href = 'index.html'; link.textContent = 'Về trang ứng dụng'; link.className = 'text-button';
+      const link = document.createElement('a'); link.href = 'catalog.html'; link.textContent = 'Về kho ứng dụng'; link.className = 'text-button';
       main.append(heading,message,link); main.style.paddingBlock = '60px'; document.documentElement.classList.remove('loading-app'); return;
     }
   }
@@ -46,7 +47,6 @@
     setText('#guide-title', 'Cài đặt ứng dụng');
     setText('.guide-lead', 'Chỉ vài bước để bắt đầu trải nghiệm.');
     setText('.bottom-app > div > span', 'Dành cho iPhone & iPad');
-    setText('.breadcrumb', app.category || 'Ứng dụng');
     setText('.nav-links .active', 'Ứng dụng');
     setText('.information-list > div:nth-child(3) dd', app.category || 'Ứng dụng');
     $('.dragon').textContent = '⌘';

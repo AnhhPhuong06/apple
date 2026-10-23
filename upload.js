@@ -44,7 +44,7 @@
           const index=pending[next++],blob=file.slice(index*size,Math.min(file.size,(index+1)*size)),hash=await digest(blob);
           for(let attempt=0;;attempt++) {
             try{await send(index,blob,hash);progress.delete(index);completed+=blob.size;update();break;}
-            catch(error){progress.delete(index);update();if(stopped || attempt>=3 || (error.status && ![408,409,429].includes(error.status) && error.status<500))throw error;await pause(600*2**attempt);}
+            catch(error){progress.delete(index);update();if(stopped || signal?.aborted || attempt>=3 || (error.status && ![408,409,429].includes(error.status) && error.status<500))throw error;await pause(600*2**attempt);}
           }
         }
       }

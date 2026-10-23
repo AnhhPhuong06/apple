@@ -25,7 +25,6 @@
   }
   document.querySelectorAll('[name="publish-mode"]').forEach(input=>input.addEventListener('change',updateMode));
   $('#saved-certificate').addEventListener('change',updateMode);
-  window.addEventListener('appspace:quick-state',event=>{active=event.detail.active;updateMode();});
   function requireLogin(){const pending=new URLSearchParams(location.search).get('resume') || sessionStorage.getItem('appspace-sign-job');active=false;location.replace('/admin/login'+(/^[0-9a-f-]{36}$/.test(pending || '')?'?resume='+pending:''));}
   function error(message){$('#sign-error').textContent=message;$('#sign-error').hidden=false;}
   function notify(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,4000);}

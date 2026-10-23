@@ -175,7 +175,7 @@ export async function createApp(options={}) {
       } catch(error) {await releaseUpload?.(false);busy=false;await clearWork(req.work);if(!res.headersSent) res.status(400).json({error:error.message});}
     });
   });
-  const publicFiles=['index.html','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','upload.js','quick-add.js','admin-apps.js','certificates-admin.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
+  const publicFiles=['index.html','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','upload.js','admin-apps.js','certificates-admin.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
   const catalogPage=async(req,res)=>res.set('Cache-Control','no-store').type('html').send((await readFile(path.join(root,'catalog.html'),'utf8')).replace('data-source="static"','data-source="server"'));
   app.get('/',(req,res,next)=>req.query.job || req.query.app?res.sendFile(path.join(root,'index.html')):catalogPage(req,res).catch(next));
   app.get('/catalog.html',catalogPage);

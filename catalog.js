@@ -15,7 +15,7 @@
   function render() {
     const query=normalize($('#catalog-search').value.trim());
     const visible=apps.filter(app=>(category==='all' || app.category===category) && normalize([app.name,app.subtitle,app.developer].join(' ')).includes(query));
-    if($('#catalog-sort').value==='name')visible.sort((a,b)=>a.name.localeCompare(b.name,'vi'));else visible.sort((a,b)=>(b.createdAt || 0)-(a.createdAt || 0) || a.name.localeCompare(b.name,'vi'));
+    if($('#catalog-sort').value==='name')visible.sort((a,b)=>a.name.localeCompare(b.name,'vi'));else visible.sort((a,b)=>(b.updatedAt || b.createdAt || 0)-(a.updatedAt || a.createdAt || 0) || a.name.localeCompare(b.name,'vi'));
     $('#catalog-count').textContent=visible.length+' ứng dụng';$('#catalog-grid').replaceChildren(...visible.map(card));
     $('#catalog-empty').hidden=visible.length>0;$('#clear-search').hidden=!apps.length;
     $('#empty-title').textContent=apps.length?'Chưa tìm thấy ứng dụng.':'Chưa có ứng dụng.';

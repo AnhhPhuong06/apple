@@ -165,6 +165,14 @@ Trong `.env`, đặt `ADMIN_TOKEN` ít nhất 24 ký tự để chủ động qu
 
 ## Kiểm tra
 
+### Cập nhật phiên bản app
+
+Vào `/admin`, tìm app trong **Ứng dụng đã tạo** rồi chọn **Cập nhật phiên bản**. Tải IPA mới và chọn đăng IPA đã ký hoặc ký bằng chứng chỉ của bạn, kể cả chứng chỉ trong kho. Trang điền lại phần giới thiệu; ảnh cũ được giữ nếu không tải ảnh thay thế. Nhập ghi chú vào **Có gì mới** rồi nhấn **Cập nhật phiên bản**.
+
+IPA mới phải giữ Bundle ID và có phiên bản cao hơn, hoặc cùng phiên bản với build cao hơn. Phiên bản và build đọc từ IPA kết quả, gồm các thành phần số phân cách bằng dấu chấm. Link `index.html?job=<id>` giữ nguyên và danh sách vẫn chỉ có một app. Cập nhật lỗi không thay bản đang phát hành. Bản đã xử lý được ghi vào thư mục revision riêng trước khi metadata được thay thế bằng một thao tác rename; các tải xuống đã bắt đầu tiếp tục dùng bản tương ứng. Revision cũ được giữ trên đĩa và được xóa cùng app.
+
+Chức năng này phát hành bản mới trên website; người dùng mở lại link và cài bản mới trên iPhone. Với GitHub Pages, xuất lại app bằng `export:pages`, commit và triển khai để cập nhật trang tĩnh.
+
 ```sh
 npm run check
 npm test

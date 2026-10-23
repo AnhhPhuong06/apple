@@ -11,8 +11,8 @@ export async function listPublishedApps(directory) {
       if(app.id!==entry.name || typeof app.name!=='string')continue;
       const fileInfo=await stat(file);
       // Return only information needed by the lists, never signer inputs or arbitrary metadata.
-      apps.push({id:app.id,name:app.name,subtitle:app.subtitle || '',version:app.version || '',developer:app.developer || '',category:app.category || 'Tiện ích',iconImage:app.iconImage || 'assets/app-default.svg',size:app.size || null,createdAt:Number.isFinite(app.createdAt)?app.createdAt:fileInfo.mtimeMs,generated:true,installUrl:`index.html?job=${encodeURIComponent(app.id)}`,otaReady:!!app.manifestUrl});
+      apps.push({id:app.id,name:app.name,subtitle:app.subtitle || '',version:app.version || '',buildVersion:app.buildVersion || '',developer:app.developer || '',category:app.category || 'Tiện ích',iconImage:app.iconImage || 'assets/app-default.svg',size:app.size || null,createdAt:Number.isFinite(app.createdAt)?app.createdAt:fileInfo.mtimeMs,updatedAt:app.updatedAt || null,generated:true,installUrl:`index.html?job=${encodeURIComponent(app.id)}`,otaReady:!!app.manifestUrl});
     } catch(error) {if(error.code==='ENOENT' || error instanceof SyntaxError)continue;throw error;}
   }
-  return apps.sort((a,b)=>b.createdAt-a.createdAt || a.id.localeCompare(b.id));
+  return apps.sort((a,b)=>(b.updatedAt || b.createdAt)-(a.updatedAt || a.createdAt) || a.id.localeCompare(b.id));
 }

@@ -2,6 +2,7 @@ import {mkdir,readFile,writeFile,copyFile,stat,readdir,lstat} from 'node:fs/prom
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {validateArchive,readAppInfo,manifestXML} from '../server/signing.mjs';
+import {appSnapshot} from '../server/app-revisions.mjs';
 
 const root=path.resolve(fileURLToPath(new URL('../',import.meta.url)));
 const [selection,baseArgument]=process.argv.slice(2);
@@ -14,11 +15,11 @@ const publishedRoot=path.join(path.resolve(process.env.DATA_DIR || path.join(roo
 const ids=selection==='all'?(await readdir(publishedRoot,{withFileTypes:true})).filter(entry=>entry.isDirectory() && validID(entry.name)).map(entry=>entry.name):[selection];
 if(!ids.length)throw new Error('No signed apps available to export.');
 for(const id of ids) {
-const source=path.join(publishedRoot,id);
+const snapshot=await appSnapshot(publishedRoot,id),source=snapshot.files;
 const destination=path.join(root,'public-apps',id);
 await mkdir(destination,{recursive:true});
 if((await lstat(path.dirname(destination))).isSymbolicLink() || (await lstat(destination)).isSymbolicLink()) throw new Error('Export folders cannot be symbolic links.');
-const original=JSON.parse(await readFile(path.join(source,'app.json'),'utf8'));
+const original=snapshot.record;
 const ipa=path.join(source,'app.ipa');await validateArchive(ipa);
 const size=(await stat(ipa)).size;
 if(size>95*1024**2) throw new Error('This IPA exceeds the Git export limit. Host it in GitHub Releases instead.');
@@ -30,6 +31,7 @@ for(const name of ['app.ipa',...images])await copyFile(path.join(source,name),pa
 // Explicit public fields only; never copy private signing inputs or server configuration.
 const record={id,name:info.CFBundleDisplayName || info.CFBundleName,version:info.CFBundleShortVersionString || info.CFBundleVersion,buildVersion:info.CFBundleVersion,bundleId:info.CFBundleIdentifier,minimumIOS:info.MinimumOSVersion || null,subtitle:original.subtitle || 'Ứng dụng dành cho iPhone & iPad',description:original.description || '',category:original.category || 'Tiện ích',developer:original.developer || 'Nhà phát triển ứng dụng',icon:'sparkles',color:'blue',iconImage:images.includes('icon.png')?`${baseURL}/files/${id}/icon.png`:'assets/app-default.svg',screenshots:images.filter(name=>name.startsWith('preview-')).sort().map(name=>`${baseURL}/files/${id}/${name}`),size,releaseNotes:Array.isArray(original.releaseNotes)?original.releaseNotes:[],file:`${baseURL}/files/${id}/app.ipa`,manifestUrl:`${baseURL}/files/${id}/manifest.plist`,sample:false,generated:true};
 record.createdAt=Number.isFinite(original.createdAt)?original.createdAt:(await stat(path.join(source,'app.json'))).mtimeMs;
+if(Number.isFinite(original.updatedAt))record.updatedAt=original.updatedAt;
 await writeFile(path.join(destination,'app.json'),JSON.stringify(record,null,2)+'\n');
 await writeFile(path.join(destination,'manifest.plist'),manifestXML({baseURL,id,bundleId:record.bundleId,version:record.buildVersion,name:record.name}));
 console.log(`Exported ${record.name} ${record.version}: ${baseURL}/index.html?job=${id}`);

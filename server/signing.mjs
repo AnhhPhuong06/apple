@@ -67,8 +67,8 @@ export function runZsign(binary,args,{cwd,timeout=600000}={}) {
 }
 
 export const xmlEscape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
-export function manifestXML({baseURL,id,bundleId,version,name}) {
-  const ipa=`${baseURL}/files/${id}/app.ipa`;
+export function manifestXML({baseURL,id,bundleId,version,name,revision}) {
+  const ipa=`${baseURL}/files/${id}/app.ipa${revision?'?revision='+revision:''}`;
   return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>items</key><array><dict><key>assets</key><array><dict><key>kind</key><string>software-package</string><key>url</key><string>${xmlEscape(ipa)}</string></dict></array><key>metadata</key><dict><key>bundle-identifier</key><string>${xmlEscape(bundleId)}</string><key>bundle-version</key><string>${xmlEscape(version)}</string><key>kind</key><string>software</string><key>title</key><string>${xmlEscape(name)}</string></dict></dict></array></dict></plist>\n`;
 }
 

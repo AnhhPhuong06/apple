@@ -12,6 +12,7 @@ import {publicOrigin} from './config.mjs';
 import {readSiteSettings,saveSiteSettings} from './site-settings.mjs';
 import {createCertificateVault} from './certificate-vault.mjs';
 import {mountCertificateRoutes} from './certificates.mjs';
+import {appSnapshot,updateTarget,validAppID} from './app-revisions.mjs';
 
 export const root=fileURLToPath(new URL('../',import.meta.url));
 export async function createApp(options={}) {
@@ -49,10 +50,12 @@ export async function createApp(options={}) {
   app.get('/api/jobs/:id',admin,(req,res)=>{const job=jobs.get(req.params.id);return job?res.json(job):res.status(404).json({error:'Không tìm thấy phiên ký. Nếu máy chủ vừa khởi động lại, hãy dùng link trang cài đã lưu.'});});
   const validID=id=>/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id);
   app.delete('/api/admin/apps/:id',admin,async(req,res,next)=>{
+    if(busy)return res.status(409).json({error:'Hãy chờ xử lý ứng dụng hoàn tất rồi xóa app.'});
     const id=req.params.id;
     if(!validID(id))return res.status(404).json({error:'Không tìm thấy ứng dụng.'});
     const directory=path.resolve(publicRoot,id);
     if(path.dirname(directory)!==publicRoot)return res.status(404).json({error:'Không tìm thấy ứng dụng.'});
+    busy=true;
     try {
       const entry=await lstat(directory);
       if(!entry.isDirectory() || entry.isSymbolicLink())return res.status(404).json({error:'Không tìm thấy ứng dụng.'});
@@ -66,7 +69,7 @@ export async function createApp(options={}) {
       try {await rm(trash,{recursive:true,force:true});}
       catch {console.warn('App unpublished; pending file cleanup will retry at the next server start.');}
       res.json({ok:true,id});
-    } catch(error) {if(error.code==='ENOENT')return res.status(404).json({error:'Không tìm thấy ứng dụng.'});next(error);}
+    } catch(error) {if(error.code==='ENOENT')return res.status(404).json({error:'Không tìm thấy ứng dụng.'});next(error);}finally{busy=false;}
   });
   app.get('/api/apps/:id',async(req,res)=>{
     if(!validID(req.params.id)) return res.status(404).json({error:'Không tìm thấy ứng dụng.'});
@@ -74,8 +77,18 @@ export async function createApp(options={}) {
   });
   app.get('/files/:id/:name',async(req,res)=>{
     if(!validID(req.params.id) || !/^(app\.ipa|manifest\.plist|icon\.png|preview-[0-4]\.(png|jpg))$/.test(req.params.name)) return res.sendStatus(404);
-    const file=path.join(publicRoot,req.params.id,req.params.name);
-    try {await stat(file);if(req.params.name==='manifest.plist') res.type('text/xml');if(req.params.name==='app.ipa') res.attachment('app.ipa');res.sendFile(file);} catch {res.sendStatus(404);}
+    try {
+      const snapshot=await appSnapshot(publicRoot,req.params.id),revision=req.query.revision;
+      if(revision!==undefined && !validAppID(revision))return res.sendStatus(404);
+      const directory=revision?path.join(snapshot.directory,'revisions',revision):snapshot.files;
+      if(revision && revision!==snapshot.record.contentRevision) {
+        const metadata=JSON.parse(await readFile(path.join(directory,'app.json'),'utf8'));
+        if(metadata.id!==req.params.id || metadata.contentRevision!==revision)return res.sendStatus(404);
+      }
+      const file=path.join(directory,req.params.name);await stat(file);
+      res.set('Cache-Control','no-store');
+      if(req.params.name==='manifest.plist')res.type('text/xml');if(req.params.name==='app.ipa')res.attachment('app.ipa');res.sendFile(file);
+    } catch {res.sendStatus(404);}
   });
   const storage=multer.diskStorage({destination:(req,file,cb)=>cb(null,req.work),filename:(req,file,cb)=>cb(null,randomUUID()+path.extname(file.originalname).toLowerCase())});
   const upload=multer({storage,limits:{fileSize:512*1024**2,files:9,fields:12,fieldSize:12000,parts:21},fileFilter:(req,file,cb)=>{
@@ -97,12 +110,13 @@ export async function createApp(options={}) {
         if(!files.ipa?.length)throw new Error('Hãy chọn file IPA đã ký để thêm ứng dụng.');
         if(files.p12 || files.profile || body.password)throw new Error('Đăng IPA đã ký không cần chứng chỉ hoặc mật khẩu. Dùng chế độ ký mới nếu cần ký lại app.');
         const settings=presentationSettings(body);
+        const target=await updateTarget(publicRoot,body,settings);
         if(settings.name || settings.version || settings.bundleId)throw new Error('Tên, phiên bản và Bundle ID được đọc từ IPA đã ký. Chọn ký mới nếu cần thay đổi.');
         await validateArchive(files.ipa[0].path);
         await prepareImages(files,req.work);
         await mkdir(path.join(req.work,'result'));
         await copyFile(files.ipa[0].path,path.join(req.work,'result','app.ipa'));
-        result=await publishResult({id,work:req.work,files,settings,baseURL,configuredBase,publicRoot});
+        result=await publishResult({id,work:req.work,files,settings,baseURL,configuredBase,publicRoot,target});
       }catch(error){failure=error.code?'Không xử lý được file ứng dụng. Vui lòng thử lại.':error.message;}
       finally{try{await clearWork(req.work);}catch{console.warn('Pending upload cleanup will retry at the next server start.');}busy=false;}
       if(failure)return res.status(400).json({error:failure});
@@ -120,8 +134,10 @@ export async function createApp(options={}) {
         const files=req.files || {}; const body=req.body || {};
         if(!files.ipa?.length)throw new Error('Hãy chọn file IPA để ký ứng dụng.');
         const settings=presentationSettings(body);
+        const target=await updateTarget(publicRoot,body,settings);
         await prepareImages(files,req.work);
         await validateArchive(files.ipa[0].path);
+        if(target && (await readAppInfo(files.ipa[0].path)).CFBundleIdentifier!==target.record.bundleId)throw new Error('IPA mới phải có cùng Bundle ID với app đang cập nhật.');
         let password;
         if(body.certificateId) {
           if(typeof body.certificateId!=='string' || files.p12 || files.profile || body.password)throw new Error('Chọn chứng chỉ trong kho hoặc tải chứng chỉ mới, không dùng đồng thời cả hai.');
@@ -144,7 +160,8 @@ export async function createApp(options={}) {
           const args=signArguments({work,password,settings,files});
           try {await signer(args,work);} finally {args.fill('');}
           const meta=JSON.parse(await readFile(path.join(work,'metadata','metadata.json'),'utf8'));
-          jobs.set(id,await publishResult({id,work,files,settings,baseURL,configuredBase,publicRoot,meta}));
+          const published=await publishResult({id,work,files,settings,baseURL,configuredBase,publicRoot,meta,target});
+          jobs.set(id,{...published,id});
         } catch(error) {jobs.set(id,{id,status:'failed',createdAt:Date.now(),error:error.message.startsWith('ENOENT')?'Không nhận được kết quả từ công cụ ký.':error.message});}
         finally {busy=false;await clearWork(work);}
       } catch(error) {busy=false;await clearWork(req.work);if(!res.headersSent) res.status(400).json({error:error.message});}

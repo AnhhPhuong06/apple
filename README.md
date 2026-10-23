@@ -165,6 +165,14 @@ Trong `.env`, đặt `ADMIN_TOKEN` ít nhất 24 ký tự để chủ động qu
 
 ## Kiểm tra
 
+### Tải IPA nhanh và tiếp tục khi mất mạng
+
+Trang admin tải IPA bằng các phần **8 MiB**, tối đa **3 luồng song song**, tự thử lại phần lỗi. Thanh tiến trình hiển thị dung lượng, tốc độ truyền và thời gian ước tính. Nếu mất mạng hoặc tải lại trang, chọn lại cùng file IPA và gửi lại biểu mẫu; trình duyệt kiểm tra SHA-256 các phần máy chủ đã nhận rồi chỉ gửi phần thiếu. Ảnh, chứng chỉ và các trường nhập cần được chọn/nhập lại sau khi tải lại trang.
+
+Máy chủ ghi thẳng từng phần vào các vùng riêng của một file trong `DATA_DIR/uploads`, kiểm tra dung lượng và SHA-256 trước khi xác nhận. Phiên chờ tồn tại tối đa 24 giờ, tối đa 4 IPA (mỗi IPA tối đa 512 MiB). Phiên hết hạn được dọn khi khởi động hoặc khi tạo phiên mới. Chỉ admin được tải, xem và xóa phiên; file chờ không có link công khai. Dữ liệu chứng chỉ không nằm trong bộ nhớ đệm upload.
+
+Khi xử lý, một hard link riêng trong thư mục làm việc cho phép dùng lại IPA mà không chép thêm toàn bộ file. Đăng IPA đã ký dùng rename; ký lỗi hoặc nhập sai thông tin vẫn giữ IPA để thử lại. Sau phát hành thành công, phiên upload được xóa. Cách này hỗ trợ upload từng yêu cầu nhỏ qua Cloudflare; [giới hạn request của Cloudflare](https://developers.cloudflare.com/network/maximum-upload-size/) vẫn áp dụng với các tệp khác. Tốc độ thực tế phụ thuộc băng thông đường truyền và VPS; số luồng song song không bảo đảm tăng tốc trên mọi mạng.
+
 ### Cập nhật phiên bản app
 
 Vào `/admin`, tìm app trong **Ứng dụng đã tạo** rồi chọn **Cập nhật phiên bản**. Tải IPA mới và chọn đăng IPA đã ký hoặc ký bằng chứng chỉ của bạn, kể cả chứng chỉ trong kho. Trang điền lại phần giới thiệu; ảnh cũ được giữ nếu không tải ảnh thay thế. Nhập ghi chú vào **Có gì mới** rồi nhấn **Cập nhật phiên bản**.

@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import {randomUUID} from 'node:crypto';
-import {mkdir,readFile,writeFile,stat,lstat,copyFile,rename,rm,readdir} from 'node:fs/promises';
+import {mkdir,readFile,writeFile,stat,lstat,rename,rm,readdir} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {validateArchive,readAppInfo,runZsign,signArguments} from './signing.mjs';
@@ -13,6 +13,7 @@ import {readSiteSettings,saveSiteSettings} from './site-settings.mjs';
 import {createCertificateVault} from './certificate-vault.mjs';
 import {mountCertificateRoutes} from './certificates.mjs';
 import {appSnapshot,updateTarget,validAppID} from './app-revisions.mjs';
+import {createUploads} from './uploads.mjs';
 
 export const root=fileURLToPath(new URL('../',import.meta.url));
 export async function createApp(options={}) {
@@ -39,12 +40,13 @@ export async function createApp(options={}) {
   auth.mount(app);
   const vault=await createCertificateVault({data,privateRoot,inspector:options.certificateInspector,policy:options.certificatePolicy});
   mountCertificateRoutes(app,{admin,vault,privateRoot});
+  const uploads=await createUploads({app,admin,data});
   app.get('/site-settings.json',async(req,res)=>res.set('Cache-Control','no-store').json(await readSiteSettings(data,root)));
   app.put('/api/admin/site-settings',admin,express.json({limit:'4kb'}),async(req,res,next)=>{
     try {res.json(await saveSiteSettings(data,req.body));}
     catch(error){if(error.code)return next(error);res.status(400).json({error:error.message});}
   });
-  app.get('/api/health',admin,(req,res)=>res.json({signerReady,otaReady:!!configuredBase,maxUploadMB:512,busy}));
+  app.get('/api/health',admin,(req,res)=>res.json({signerReady,otaReady:!!configuredBase,maxUploadMB:512,chunkUpload:true,busy:busy || uploads.active}));
   app.get('/api/admin/apps',admin,async(req,res)=>res.json({apps:await listPublishedApps(publicRoot)}));
   app.get('/api/apps',async(req,res)=>res.set('Cache-Control','no-store').json({apps:await listPublishedApps(publicRoot)}));
   app.get('/api/jobs/:id',admin,(req,res)=>{const job=jobs.get(req.params.id);return job?res.json(job):res.status(404).json({error:'Không tìm thấy phiên ký. Nếu máy chủ vừa khởi động lại, hãy dùng link trang cài đã lưu.'});});
@@ -103,10 +105,11 @@ export async function createApp(options={}) {
     const id=randomUUID();req.work=path.join(privateRoot,id);
     try {await mkdir(req.work,{mode:0o700});}catch {busy=false;return res.status(500).json({error:'Không tạo được thư mục tải lên.'});}
     upload(req,res,async error=>{
-      let result,failure;
+      let result,failure,releaseUpload;
       try {
         if(error)throw new Error(error instanceof multer.MulterError?'Tệp quá lớn hoặc số lượng tệp vượt giới hạn.':error.message);
         const files=req.files || {},body=req.body || {};
+        releaseUpload=await uploads.acquire(body.uploadId,files,req.work);
         if(!files.ipa?.length)throw new Error('Hãy chọn file IPA đã ký để thêm ứng dụng.');
         if(files.p12 || files.profile || body.password)throw new Error('Đăng IPA đã ký không cần chứng chỉ hoặc mật khẩu. Dùng chế độ ký mới nếu cần ký lại app.');
         const settings=presentationSettings(body);
@@ -115,10 +118,10 @@ export async function createApp(options={}) {
         await validateArchive(files.ipa[0].path);
         await prepareImages(files,req.work);
         await mkdir(path.join(req.work,'result'));
-        await copyFile(files.ipa[0].path,path.join(req.work,'result','app.ipa'));
+        await rename(files.ipa[0].path,path.join(req.work,'result','app.ipa'));
         result=await publishResult({id,work:req.work,files,settings,baseURL,configuredBase,publicRoot,target});
       }catch(error){failure=error.code?'Không xử lý được file ứng dụng. Vui lòng thử lại.':error.message;}
-      finally{try{await clearWork(req.work);}catch{console.warn('Pending upload cleanup will retry at the next server start.');}busy=false;}
+      finally{try{await releaseUpload?.(!!result);await clearWork(req.work);}catch{console.warn('Pending upload cleanup will retry at the next server start.');}busy=false;}
       if(failure)return res.status(400).json({error:failure});
       res.status(201).json(result);
     });
@@ -129,9 +132,11 @@ export async function createApp(options={}) {
     busy=true;
     const id=randomUUID();req.work=path.join(privateRoot,id);await mkdir(req.work,{mode:0o700});
     upload(req,res,async error=>{
+      let releaseUpload,consumed=false;
       try {
         if(error) throw new Error(error instanceof multer.MulterError?'Tệp quá lớn hoặc số lượng tệp vượt giới hạn.':error.message);
         const files=req.files || {}; const body=req.body || {};
+        releaseUpload=await uploads.acquire(body.uploadId,files,req.work);
         if(!files.ipa?.length)throw new Error('Hãy chọn file IPA để ký ứng dụng.');
         const settings=presentationSettings(body);
         const target=await updateTarget(publicRoot,body,settings);
@@ -161,13 +166,14 @@ export async function createApp(options={}) {
           try {await signer(args,work);} finally {args.fill('');}
           const meta=JSON.parse(await readFile(path.join(work,'metadata','metadata.json'),'utf8'));
           const published=await publishResult({id,work,files,settings,baseURL,configuredBase,publicRoot,meta,target});
+          consumed=true;
           jobs.set(id,{...published,id});
         } catch(error) {jobs.set(id,{id,status:'failed',createdAt:Date.now(),error:error.message.startsWith('ENOENT')?'Không nhận được kết quả từ công cụ ký.':error.message});}
-        finally {busy=false;await clearWork(work);}
-      } catch(error) {busy=false;await clearWork(req.work);if(!res.headersSent) res.status(400).json({error:error.message});}
+        finally {await releaseUpload?.(consumed);releaseUpload=null;busy=false;await clearWork(work);}
+      } catch(error) {await releaseUpload?.(false);busy=false;await clearWork(req.work);if(!res.headersSent) res.status(400).json({error:error.message});}
     });
   });
-  const publicFiles=['index.html','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','admin-apps.js','certificates-admin.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
+  const publicFiles=['index.html','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','upload.js','admin-apps.js','certificates-admin.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
   const catalogPage=async(req,res)=>res.set('Cache-Control','no-store').type('html').send((await readFile(path.join(root,'catalog.html'),'utf8')).replace('data-source="static"','data-source="server"'));
   app.get('/',(req,res,next)=>req.query.job || req.query.app?res.sendFile(path.join(root,'index.html')):catalogPage(req,res).catch(next));
   app.get('/catalog.html',catalogPage);

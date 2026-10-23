@@ -1,0 +1,27 @@
+[Unit]
+Description=AppSpace IPA signing and installation website
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=appspace
+Group=appspace
+WorkingDirectory=/opt/appspace/current
+EnvironmentFile=/etc/appspace/appspace.env
+ExecStart=/opt/appspace/node/bin/node server/index.mjs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/appspace
+RestrictSUIDSGID=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

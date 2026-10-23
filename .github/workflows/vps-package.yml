@@ -1,0 +1,60 @@
+name: Test Ubuntu VPS package
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/**'
+      - 'scripts/package-vps.mjs'
+      - 'scripts/setup-signer.mjs'
+      - 'package*.json'
+      - '.github/workflows/vps-package.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run check && npm test
+      - name: Validate installer syntax
+        run: |
+          bash -n deploy/install-ubuntu.sh
+          shellcheck -S warning deploy/install-ubuntu.sh
+      - run: npm run package:vps
+      - name: Extract and install on Ubuntu
+        run: |
+          mkdir -p /tmp/appspace-package-test
+          tar -xzf packages/appspace-vps.tar.gz -C /tmp/appspace-package-test
+          sudo bash /tmp/appspace-package-test/appspace-vps/deploy/install-ubuntu.sh appspace-ci.invalid
+      - name: Verify service, admin isolation and imported app
+        run: |
+          curl --fail --silent http://127.0.0.1:4173/healthz
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4173/api/health)" = 401
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4173/admin)" = 302
+          curl --fail --silent http://127.0.0.1:4173/api/apps > /tmp/catalog.json
+          node -e "const x=require('/tmp/catalog.json');if(!x.apps.some(a=>a.name==='Nro Han'))process.exit(1)"
+          sudo systemctl is-active appspace caddy
+          sudo stat -c '%a' /etc/appspace/appspace.env | grep -qx 600
+          sudo stat -c '%a' /etc/appspace/admin-password.txt | grep -qx 600
+      - name: Verify installer can update safely
+        run: |
+          sudo cp /etc/appspace/admin-password.txt /tmp/original-admin-password
+          sudo bash /tmp/appspace-package-test/appspace-vps/deploy/install-ubuntu.sh appspace-ci.invalid
+          sudo cmp /etc/appspace/admin-password.txt /tmp/original-admin-password
+          curl --fail --silent http://127.0.0.1:4173/healthz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appspace-vps
+          path: packages/
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          sudo systemctl status appspace --no-pager || true
+          sudo journalctl -u appspace -n 60 --no-pager || true

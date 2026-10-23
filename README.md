@@ -74,6 +74,16 @@ Khi chưa có `PUBLIC_BASE_URL`, hệ thống vẫn ký và cho tải IPA, nhưn
 
 ## Triển khai
 
+### Gói cài sẵn cho Ubuntu VPS
+
+Chạy `npm run package:vps` để tạo `packages/appspace-vps.tar.gz` và `.zip`, kèm checksum và hướng dẫn. Upload gói lên VPS, giải nén rồi chạy:
+
+```bash
+sudo bash deploy/install-ubuntu.sh apps.tenmiencuaban.com
+```
+
+Thay domain bằng tên miền đã trỏ tới VPS. Bộ cài dành cho Ubuntu 24.04/22.04 x64, cài Node.js, zsign, systemd và Caddy HTTPS; tạo mật khẩu admin mới và nhập các app đã xuất công khai. Hướng dẫn đầy đủ ở [deploy/HUONG-DAN-VPS.md](deploy/HUONG-DAN-VPS.md). Gói không chứa mật khẩu/chứng chỉ ký hay thư mục dữ liệu riêng của máy cá nhân.
+
 ### Đưa admin lên Render
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2FAnhhPhuong06%2Fapple)

@@ -10,7 +10,8 @@
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs",
     "build": "node scripts/build.mjs",
-    "export:pages": "node scripts/export-pages.mjs"
+    "export:pages": "node scripts/export-pages.mjs",
+    "package:vps": "node scripts/package-vps.mjs"
   },
   "engines": {
     "node": ">=24"

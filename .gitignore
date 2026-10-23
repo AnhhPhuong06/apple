@@ -8,5 +8,6 @@ _site/
 data/
 tools/zsign/
 .env
+packages/
 *.p12
 *.mobileprovision

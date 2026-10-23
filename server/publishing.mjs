@@ -34,14 +34,14 @@ export async function prepareImages(files,work) {
   }
 }
 
-export async function publishResult({id,work,files,settings,baseURL,configuredBase,publicRoot,meta={},target=null}) {
+export async function publishResult({id,work,files,settings,baseURL,configuredBase,publicRoot,meta={},target=null,sourceInfo=null}) {
   const previous=target?.record;
   if(previous)id=previous.id;
   const revision=previous?randomUUID():null;
   const suffix=revision?'?revision='+revision:'';
   const fileURL=name=>`${baseURL}/files/${id}/${name}${suffix}`;
   const result=path.join(work,'result');
-  const info=await readAppInfo(path.join(result,'app.ipa'));
+  const info=sourceInfo || await readAppInfo(path.join(result,'app.ipa'));
   const bundleId=info.CFBundleIdentifier,version=info.CFBundleShortVersionString || info.CFBundleVersion,buildVersion=info.CFBundleVersion,name=info.CFBundleDisplayName || info.CFBundleName;
   if([name,version,bundleId,buildVersion].some(value=>typeof value!=='string' || !value))throw new Error('IPA không có đủ tên, Bundle ID và phiên bản để tạo trang cài đặt.');
   if(previous)validateUpdate(info,previous);

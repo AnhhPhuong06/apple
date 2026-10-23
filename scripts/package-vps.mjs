@@ -27,7 +27,7 @@ for(const entry of await readdir(path.join(root,'public-apps'),{withFileTypes:tr
 const secretPath=path.join(root,'data','admin-key.txt');let secret='';
 try{secret=(await readFile(secretPath,'utf8')).trim();}catch(error){if(error.code!=='ENOENT')throw error;}
 const hashes={};
-files.push('certificates-admin.js','upload.js','server/apple-pki.json');
+files.push('certificates-admin.js','upload.js','quick-add.js','server/apple-pki.json');
 try {
   for(const relative of files.sort()) {
     const source=path.join(root,relative),target=path.join(destination,relative);

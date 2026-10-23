@@ -165,6 +165,16 @@ Trong `.env`, đặt `ADMIN_TOKEN` ít nhất 24 ký tự để chủ động qu
 
 ## Kiểm tra
 
+### Thêm app nhanh
+
+Mở `/admin` → **Thêm app nhanh**, chọn **IPA đã ký sẵn** hoặc **Ký bằng chứng chỉ trong kho**, chọn tối đa 20 IPA và nhấn **Thêm nhanh**. Tên, Bundle ID và phiên bản tự đọc từ từng IPA. Có thể đặt nhà phát triển và danh mục chung cho cả lượt; các giá trị trong mục này giữ nguyên để dùng cho lượt tiếp theo trên trang. Chứng chỉ đã chọn được dùng lại qua ID trong phiên trình duyệt, không đưa mật khẩu vào bộ nhớ trình duyệt.
+
+Website tải trước IPA tiếp theo trong lúc máy chủ kiểm tra/ký app hiện tại; mỗi lượt chỉ ký một app để giữ mức sử dụng tài nguyên VPS. Kiểm tra gói và đọc metadata gộp trong một lần duyệt ZIP cho IPA đầu vào; IPA sau ký vẫn được đọc lại để lấy metadata thực tế. Không bỏ qua kiểm tra đường dẫn, giới hạn kích thước hoặc các entry nằm sau Info.plist.
+
+Mỗi file có trạng thái, link cài và nút sao chép riêng. App lỗi được báo riêng; các app khác tiếp tục xử lý. **Thêm phần còn lại** chỉ thử lại các app chưa hoàn tất, không tạo lại app đã thành công. **Dừng sau app hiện tại** hoàn tất app đang tải/xử lý rồi dừng; phần tải trước còn thiếu có thể được tiếp tục. Giữ trang mở trong lúc thêm nhiều app; tải lại trang sẽ mất danh sách file đang chọn và các thông tin chưa gửi. Các app đã phát hành vẫn nằm trong danh sách quản lý.
+
+Thêm nhanh tạo app mới. Để giữ link của app cũ, dùng **Cập nhật phiên bản** trong danh sách. Biểu mẫu bên dưới vẫn hỗ trợ icon, ảnh, mô tả riêng và chứng chỉ tải thủ công.
+
 ### Tải IPA nhanh và tiếp tục khi mất mạng
 
 Trang admin tải IPA bằng các phần **8 MiB**, tối đa **3 luồng song song**, tự thử lại phần lỗi. Thanh tiến trình hiển thị dung lượng, tốc độ truyền và thời gian ước tính. Nếu mất mạng hoặc tải lại trang, chọn lại cùng file IPA và gửi lại biểu mẫu; trình duyệt kiểm tra SHA-256 các phần máy chủ đã nhận rồi chỉ gửi phần thiếu. Ảnh, chứng chỉ và các trường nhập cần được chọn/nhập lại sau khi tải lại trang.

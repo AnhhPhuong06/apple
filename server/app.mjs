@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {mkdir,readFile,writeFile,stat,lstat,rename,rm,readdir} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {validateArchive,readAppInfo,runZsign,signArguments} from './signing.mjs';
+import {validateArchive,runZsign,signArguments} from './signing.mjs';
 import {createAdminAuth} from './auth.mjs';
 import {listPublishedApps} from './catalog.mjs';
 import {presentationSettings,prepareImages,publishResult} from './publishing.mjs';
@@ -115,11 +115,11 @@ export async function createApp(options={}) {
         const settings=presentationSettings(body);
         const target=await updateTarget(publicRoot,body,settings);
         if(settings.name || settings.version || settings.bundleId)throw new Error('Tên, phiên bản và Bundle ID được đọc từ IPA đã ký. Chọn ký mới nếu cần thay đổi.');
-        await validateArchive(files.ipa[0].path);
+        const sourceInfo=await validateArchive(files.ipa[0].path,{readInfo:true});
         await prepareImages(files,req.work);
         await mkdir(path.join(req.work,'result'));
         await rename(files.ipa[0].path,path.join(req.work,'result','app.ipa'));
-        result=await publishResult({id,work:req.work,files,settings,baseURL,configuredBase,publicRoot,target});
+        result=await publishResult({id,work:req.work,files,settings,baseURL,configuredBase,publicRoot,target,sourceInfo});
       }catch(error){failure=error.code?'Không xử lý được file ứng dụng. Vui lòng thử lại.':error.message;}
       finally{try{await releaseUpload?.(!!result);await clearWork(req.work);}catch{console.warn('Pending upload cleanup will retry at the next server start.');}busy=false;}
       if(failure)return res.status(400).json({error:failure});
@@ -141,13 +141,12 @@ export async function createApp(options={}) {
         const settings=presentationSettings(body);
         const target=await updateTarget(publicRoot,body,settings);
         await prepareImages(files,req.work);
-        await validateArchive(files.ipa[0].path);
-        if(target && (await readAppInfo(files.ipa[0].path)).CFBundleIdentifier!==target.record.bundleId)throw new Error('IPA mới phải có cùng Bundle ID với app đang cập nhật.');
+        const sourceInfo=await validateArchive(files.ipa[0].path,{readInfo:true});
+        if(target && sourceInfo.CFBundleIdentifier!==target.record.bundleId)throw new Error('IPA mới phải có cùng Bundle ID với app đang cập nhật.');
         let password;
         if(body.certificateId) {
           if(typeof body.certificateId!=='string' || files.p12 || files.profile || body.password)throw new Error('Chọn chứng chỉ trong kho hoặc tải chứng chỉ mới, không dùng đồng thời cả hai.');
-          const appInfo=await readAppInfo(files.ipa[0].path);
-          const saved=await vault.materialize(body.certificateId,req.work,settings.bundleId || appInfo.CFBundleIdentifier);
+          const saved=await vault.materialize(body.certificateId,req.work,settings.bundleId || sourceInfo.CFBundleIdentifier);
           files.p12=[{path:saved.p12}];files.profile=[{path:saved.profile}];password=saved.password;
         }else {
           for(const key of ['p12','profile'])if(!files[key]?.length)throw new Error('Cần đủ chứng chỉ .p12 và hồ sơ .mobileprovision, hoặc chọn một bộ đã lưu trong kho.');
@@ -173,7 +172,7 @@ export async function createApp(options={}) {
       } catch(error) {await releaseUpload?.(false);busy=false;await clearWork(req.work);if(!res.headersSent) res.status(400).json({error:error.message});}
     });
   });
-  const publicFiles=['index.html','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','upload.js','admin-apps.js','certificates-admin.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
+  const publicFiles=['index.html','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','upload.js','quick-add.js','admin-apps.js','certificates-admin.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
   const catalogPage=async(req,res)=>res.set('Cache-Control','no-store').type('html').send((await readFile(path.join(root,'catalog.html'),'utf8')).replace('data-source="static"','data-source="server"'));
   app.get('/',(req,res,next)=>req.query.job || req.query.app?res.sendFile(path.join(root,'index.html')):catalogPage(req,res).catch(next));
   app.get('/catalog.html',catalogPage);

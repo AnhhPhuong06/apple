@@ -23,14 +23,15 @@ export function readAppInfo(file) {
   }));
 }
 
-export function validateArchive(file) {
+export function validateArchive(file,{readInfo=false}={}) {
   return new Promise((resolve,reject) => {
     yauzl.open(file,{lazyEntries:true,validateEntrySizes:true},(error,zip) => {
       if(error) return reject(new Error('Không đọc được IPA. Hãy chọn gói ứng dụng iOS hợp lệ.'));
-      let size=0, count=0; const apps=new Set(); const names=new Set();
-      const fail=(message)=>{zip.close();reject(new Error(message));};
+      let size=0,count=0,info,failed=false;const apps=new Set(),names=new Set();
+      const fail=message=>{if(failed)return;failed=true;zip.close();reject(new Error(message));};
       zip.on('error',()=>fail('Gói IPA bị hỏng hoặc có đường dẫn không hợp lệ.'));
       zip.on('entry',entry=>{
+        if(failed)return;
         const name=entry.fileName;
         const segments=name.split('/');
         const type=(entry.externalFileAttributes >>> 16) & 0xf000;
@@ -38,9 +39,25 @@ export function validateArchive(file) {
         names.add(name.toLowerCase()); size+=entry.uncompressedSize; count++;
         if(size>2*1024**3 || count>60000) return fail('IPA vượt giới hạn 2 GB sau giải nén hoặc có quá nhiều tệp.');
         const match=name.match(/^Payload\/([^/]+\.app)\/Info\.plist$/); if(match) apps.add(match[1]);
+        if(readInfo && match) {
+          if(entry.uncompressedSize>2*1024**2)return fail('Info.plist quá lớn.');
+          zip.openReadStream(entry,(error,stream)=>{
+            if(error)return fail('Không đọc được thông tin app.');
+            let length=0;const chunks=[];
+            stream.on('data',chunk=>{length+=chunk.length;if(length>2*1024**2){stream.destroy();fail('Info.plist quá lớn.');return;}chunks.push(chunk);});
+            stream.on('error',()=>fail('Thông tin app bị hỏng.'));
+            stream.on('end',()=>{
+              if(failed)return;
+              try{const bytes=Buffer.concat(chunks);info=bytes.subarray(0,8).toString()==='bplist00'?bplist.parseBuffer(bytes)[0]:plist.parse(bytes.toString('utf8'));}
+              catch{return fail('Info.plist không hợp lệ.');}
+              zip.readEntry();
+            });
+          });
+          return;
+        }
         zip.readEntry();
       });
-      zip.on('end',()=>apps.size===1 ? resolve() : reject(new Error('IPA phải chứa đúng một ứng dụng Payload/*.app/Info.plist.')));
+      zip.on('end',()=>{if(!failed)apps.size===1?resolve(info):reject(new Error('IPA phải chứa đúng một ứng dụng Payload/*.app/Info.plist.'));});
       zip.readEntry();
     });
   });

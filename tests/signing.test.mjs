@@ -24,6 +24,17 @@ test('reject unsafe archives, accept one app, and read actual build version',asy
  }finally{await rm(dir,{recursive:true,force:true});}
 });
 
+test('single-pass IPA inspection reads metadata while still checking entries after Info.plist',async()=>{
+ const dir=await mkdtemp(path.join(os.tmpdir(),'appspace-inspect-'));
+ try {
+  const good=path.join(dir,'good.ipa');await writeFile(good,await ipa());assert.deepEqual(await validateArchive(good,{readInfo:true}),info);
+  const lateLink=path.join(dir,'late-link.ipa');await writeFile(lateLink,await zip([['Payload/Test.app/Info.plist',plist.build(info)],['Payload/Test.app/link','../../secret',{mode:0o120777}]]));await assert.rejects(validateArchive(lateLink,{readInfo:true}),/liên kết/);
+  const two=path.join(dir,'two.ipa');await writeFile(two,await zip([['Payload/A.app/Info.plist',plist.build(info)],['Payload/B.app/Info.plist',plist.build(info)]]));await assert.rejects(validateArchive(two,{readInfo:true}),/đúng một/);
+  const malformed=path.join(dir,'malformed.ipa');await writeFile(malformed,await zip([['Payload/A.app/Info.plist','not a plist']]));await assert.rejects(validateArchive(malformed,{readInfo:true}),/Info.plist/);
+  const oversized=path.join(dir,'oversized.ipa');await writeFile(oversized,await zip([['Payload/A.app/Info.plist','x'.repeat(2*1024**2+1)]]));await assert.rejects(validateArchive(oversized,{readInfo:true}),/quá lớn/);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
+
 test('signing API converts uploaded JPG/PNG icons and keeps JPG/PNG screenshots',async()=>{
  const dir=await mkdtemp(path.join(os.tmpdir(),'appspace-image-api-'));const token='image-api-admin-token-123456789';let calls=0;
  const signer=async(args,work)=>{

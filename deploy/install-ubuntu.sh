@@ -61,8 +61,11 @@ release_dir=$(mktemp -d "$install_root/releases/release-XXXXXXXX")
 rsync -a --exclude='data/' --exclude='.env' --exclude='.git/' --exclude='node_modules/' --exclude='tools/' --exclude='packages/' --exclude='_site/' --exclude='.preview/' --exclude='*.p12' --exclude='*.mobileprovision' "$source_dir/" "$release_dir/"
 chown -R appspace:appspace "$release_dir"
 chmod 0755 "$release_dir"
-runuser -u appspace -- env PATH="$node_dir/bin:/usr/bin:/bin" npm --prefix "$release_dir" ci --omit=dev --no-audit --no-fund
-runuser -u appspace -- env PATH="$node_dir/bin:/usr/bin:/bin" "$node_dir/bin/node" "$release_dir/scripts/setup-signer.mjs"
+(
+  cd "$release_dir"
+  runuser -u appspace -- env PATH="$node_dir/bin:/usr/bin:/bin" npm ci --omit=dev --no-audit --no-fund
+  runuser -u appspace -- env PATH="$node_dir/bin:/usr/bin:/bin" "$node_dir/bin/node" scripts/setup-signer.mjs
+)
 
 if [[ ! -f "$config_file" ]]; then
   log 'Creating a new admin password for this VPS...'
@@ -78,7 +81,10 @@ chmod 0600 "$config_file"
 [[ ! -f "$config_dir/admin-password.txt" ]] || chmod 0600 "$config_dir/admin-password.txt"
 
 log 'Importing only publicly exported apps; existing app IDs are preserved...'
-runuser -u appspace -- env PATH="$node_dir/bin:/usr/bin:/bin" "$node_dir/bin/node" "$release_dir/deploy/import-public-apps.mjs" "$release_dir/public-apps" "$data_root" "https://$domain"
+(
+  cd "$release_dir"
+  runuser -u appspace -- env PATH="$node_dir/bin:/usr/bin:/bin" "$node_dir/bin/node" deploy/import-public-apps.mjs "$release_dir/public-apps" "$data_root" "https://$domain"
+)
 # Runtime can write only its data directory. Source, dependencies and signer stay read-only.
 chown -R root:root "$release_dir"
 chmod -R go-w "$release_dir"

@@ -4,6 +4,18 @@ Gói có đầy đủ trang admin, trang cài app, hỗ trợ JPG/PNG và logo b
 
 ## 1. Chuẩn bị
 
+### Upload IPA trực tiếp, website vẫn qua Cloudflare
+
+Tạo DNS **A** `upload` → `180.93.114.57`, chọn **DNS only / mây xám** trong Cloudflare. Sau khi DNS trỏ đúng VPS, chạy installer với hai tên miền:
+
+```bash
+bash /root/appspace-vps/deploy/install-ubuntu.sh linktructiep.fun upload.linktructiep.fun
+```
+
+Caddy tự cấu hình HTTPS và chỉ mở đường nhận các phần IPA trên host upload. Đăng nhập, chứng chỉ và phát hành app vẫn qua website chính. Tải lại trang admin; tiến trình có dòng **Tải thẳng lên máy chủ** khi dùng đường riêng. Nếu HTTPS/DNS chưa sẵn sàng, trang tự dùng lại đường tải hiện tại. Dữ liệu app và mật khẩu được giữ nguyên. Tốc độ thực tế vẫn phụ thuộc mạng của client và VPS.
+
+Các lần cập nhật sau dùng một tên miền chính vẫn giữ host upload đã cấu hình. Tắt upload riêng bằng `bash /root/appspace-vps/deploy/install-ubuntu.sh linktructiep.fun --no-direct-upload`.
+
 - Ubuntu Server **24.04 LTS x64**, 2 vCPU / 2 GB RAM, SSD từ 25 GB. Installer cũng chấp nhận Ubuntu 22.04 x64.
 - SSH với quyền root hoặc sudo; VPS cần kết nối Internet để tải Node.js, thư viện và zsign.
 - Một tên miền/subdomain, ví dụ `apps.tenmiencuaban.com`, có bản ghi **A** trỏ tới IP VPS. Nếu có bản ghi AAAA, IPv6 phải trỏ đúng VPS; nếu không dùng IPv6 thì bỏ AAAA.

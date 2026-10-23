@@ -8,7 +8,7 @@ import {validateArchive,runZsign,signArguments} from './signing.mjs';
 import {createAdminAuth} from './auth.mjs';
 import {listPublishedApps} from './catalog.mjs';
 import {presentationSettings,prepareImages,publishResult} from './publishing.mjs';
-import {publicOrigin} from './config.mjs';
+import {publicOrigin,uploadOrigin} from './config.mjs';
 import {readSiteSettings,saveSiteSettings} from './site-settings.mjs';
 import {createCertificateVault} from './certificate-vault.mjs';
 import {mountCertificateRoutes} from './certificates.mjs';
@@ -21,6 +21,9 @@ export async function createApp(options={}) {
   const host=options.host || process.env.HOST || '127.0.0.1';
   const token=options.token ?? process.env.ADMIN_TOKEN ?? '';
   const configuredBase=publicOrigin(options.baseURL);
+  const uploadBase=uploadOrigin(options.uploadBaseURL);
+  if(uploadBase && !configuredBase)throw Error('Cần PUBLIC_BASE_URL là HTTPS để dùng UPLOAD_BASE_URL.');
+  if(uploadBase && uploadBase===configuredBase)throw Error('UPLOAD_BASE_URL phải là tên miền upload riêng.');
   const baseURL=configuredBase || `http://127.0.0.1:${port}`;
   const data=path.resolve(options.dataDir || process.env.DATA_DIR || path.join(root,'data'));
   const privateRoot=path.join(data,'private'), publicRoot=path.join(data,'published'),deletedRoot=path.join(data,'deleted-apps');
@@ -40,13 +43,13 @@ export async function createApp(options={}) {
   auth.mount(app);
   const vault=await createCertificateVault({data,privateRoot,inspector:options.certificateInspector,policy:options.certificatePolicy});
   mountCertificateRoutes(app,{admin,vault,privateRoot});
-  const uploads=await createUploads({app,admin,data});
+  const uploads=await createUploads({app,admin,data,publicBase:configuredBase,uploadBase});
   app.get('/site-settings.json',async(req,res)=>res.set('Cache-Control','no-store').json(await readSiteSettings(data,root)));
   app.put('/api/admin/site-settings',admin,express.json({limit:'4kb'}),async(req,res,next)=>{
     try {res.json(await saveSiteSettings(data,req.body));}
     catch(error){if(error.code)return next(error);res.status(400).json({error:error.message});}
   });
-  app.get('/api/health',admin,(req,res)=>res.json({signerReady,otaReady:!!configuredBase,maxUploadMB:512,chunkUpload:true,busy:busy || uploads.active}));
+  app.get('/api/health',admin,(req,res)=>res.json({signerReady,otaReady:!!configuredBase,maxUploadMB:512,chunkUpload:true,directUpload:!!uploadBase,busy:busy || uploads.active}));
   app.get('/api/admin/apps',admin,async(req,res)=>res.json({apps:await listPublishedApps(publicRoot)}));
   app.get('/api/apps',async(req,res)=>res.set('Cache-Control','no-store').json({apps:await listPublishedApps(publicRoot)}));
   app.get('/api/jobs/:id',admin,(req,res)=>{const job=jobs.get(req.params.id);return job?res.json(job):res.status(404).json({error:'Không tìm thấy phiên ký. Nếu máy chủ vừa khởi động lại, hãy dùng link trang cài đã lưu.'});});

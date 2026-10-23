@@ -62,11 +62,11 @@
   function progress(){active=true;updateMode();$('#sign-error').hidden=true;$('#result-card').hidden=true;$('#process-card').hidden=false;$('#process-card').scrollIntoView({behavior:'smooth',block:'center'});}
   async function uploadIPA(data,publishedMode) {
     if(fastUpload && window.AppSpaceUpload && data.get('ipa') instanceof File) {
-      const id=await window.AppSpaceUpload(data.get('ipa'),{onUnauthorized:requireLogin,onProgress:({loaded,total,bytesPerSecond})=>{
+      const id=await window.AppSpaceUpload(data.get('ipa'),{onUnauthorized:requireLogin,onProgress:({loaded,total,bytesPerSecond,transport})=>{
         const percent=Math.floor(loaded/total*100);$('#upload-progress').value=percent;$('#process-label').textContent=percent===100?'Đã tải IPA. Đang chuẩn bị phát hành…':`Đang tải IPA lên… ${percent}%`;
         const mb=bytes=>(bytes/1024**2).toLocaleString('vi-VN',{maximumFractionDigits:1});
         const seconds=bytesPerSecond>0?Math.ceil((total-loaded)/bytesPerSecond):null;
-        $('#process-detail').textContent=`${mb(loaded)} / ${mb(total)} MB${bytesPerSecond>0?' · '+mb(bytesPerSecond)+' MB/s':''}${seconds && seconds>0?' · Còn khoảng '+(seconds<60?seconds+' giây':Math.ceil(seconds/60)+' phút'):''}. Có thể chọn lại cùng file để tiếp tục nếu mất mạng.`;
+        $('#process-detail').textContent=`${mb(loaded)} / ${mb(total)} MB${bytesPerSecond>0?' · '+mb(bytesPerSecond)+' MB/s':''}${seconds && seconds>0?' · Còn khoảng '+(seconds<60?seconds+' giây':Math.ceil(seconds/60)+' phút'):''}${transport==='direct'?' · Tải thẳng lên máy chủ':''}. Có thể chọn lại cùng file để tiếp tục nếu mất mạng.`;
       }});
       data.delete('ipa');data.set('uploadId',id);
       $('#process-detail').textContent='IPA đã tải đủ. Đang gửi ảnh và thông tin ứng dụng.';

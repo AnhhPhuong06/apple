@@ -1,7 +1,7 @@
 import express from 'express';
 import {mkdir,readdir,readFile,writeFile,rm,open,link} from 'node:fs/promises';
 import {createWriteStream} from 'node:fs';
-import {randomUUID,createHash} from 'node:crypto';
+import {randomUUID,createHash,randomBytes,createHmac,timingSafeEqual} from 'node:crypto';
 import {Transform} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import path from 'node:path';
@@ -11,7 +11,8 @@ export const uploadChunkSize=8*1024**2;
 const lifetime=24*60*60*1000,maxSize=512*1024**2,maxSessions=4;
 const failure=(message,status=400)=>Object.assign(new Error(message),{status});
 
-export async function createUploads({app,admin,data}) {
+export async function createUploads({app,admin,data,publicBase='',uploadBase=''}) {
+  const transferKey=randomBytes(32);
   const root=path.join(data,'uploads'),sessions=new Map();await mkdir(root,{recursive:true,mode:0o700});
   const directory=id=>path.join(root,id);
   const total=session=>Math.ceil(session.size/uploadChunkSize);
@@ -36,7 +37,13 @@ export async function createUploads({app,admin,data}) {
     if(!session || session.expiresAt<=Date.now())throw failure('Phiên tải đã hết hạn. Hãy chọn lại file IPA.',404);
     return session;
   }
-  const status=session=>({id:session.id,size:session.size,chunkSize:uploadChunkSize,parallel:3,expiresAt:session.expiresAt,received:[...session.received].map(([index,hash])=>({index,hash}))});
+  const signature=(session,expires)=>createHmac('sha256',transferKey).update(`${session.id}.${session.size}.${session.fingerprint}.${expires}`).digest('hex');
+  const transport=session=>{
+    if(!uploadBase)return undefined;
+    const expiresAt=Math.min(session.expiresAt,Date.now()+60*60*1000);
+    return {origin:uploadBase,url:`${uploadBase}/api/transfer/${session.id}/chunks`,ticket:`${expiresAt}.${signature(session,expiresAt)}`,expiresAt};
+  };
+  const status=session=>({id:session.id,size:session.size,chunkSize:uploadChunkSize,parallel:uploadBase?6:3,transport:transport(session),expiresAt:session.expiresAt,received:[...session.received].map(([index,hash])=>({index,hash}))});
   const route=handler=>async(req,res)=>{try{await handler(req,res);}catch(error){if(!res.headersSent && !res.destroyed)res.status(error.status || 500).json({error:error.status?error.message:'Chưa xử lý được tệp tải lên. Vui lòng thử lại.'});}};
   // Serialize creation so concurrent requests cannot exceed the disk quota.
   let creating=Promise.resolve();
@@ -63,7 +70,7 @@ export async function createUploads({app,admin,data}) {
     const session=get(req.params.id);if(session.locked || session.inflight.size)throw failure('Tệp đang được xử lý. Vui lòng chờ.',409);
     session.locked=true;await discard(session);res.json({ok:true});
   }));
-  app.put('/api/admin/uploads/:id/chunks/:index',admin,route(async(req,res)=>{
+  const receive=route(async(req,res)=>{
     const session=get(req.params.id),raw=req.params.index,index=Number(raw),hash=req.get('X-Chunk-SHA256');
     if(!/^(0|[1-9]\d*)$/.test(raw) || !Number.isSafeInteger(index) || index>=total(session) || !/^[a-f0-9]{64}$/.test(hash || '') || !req.is('application/octet-stream'))throw failure('Phần tải lên không hợp lệ.');
     if(session.locked || session.inflight.has(index))throw failure('Phần tệp đang được xử lý. Vui lòng thử lại.',409);
@@ -83,6 +90,23 @@ export async function createUploads({app,admin,data}) {
       await writeFile(path.join(directory(session.id),`part-${index}.json`),JSON.stringify({size,hash}),{mode:0o600});
       session.received.set(index,hash);res.status(201).json({ok:true,index});
     }finally{session.inflight.delete(index);}
+  });
+  app.put('/api/admin/uploads/:id/chunks/:index',admin,receive);
+  function cors(req,res,next) {
+    if(!uploadBase)return res.sendStatus(404);
+    if(req.get('Origin')!==publicBase)return res.sendStatus(403);
+    res.vary('Origin');res.set('Access-Control-Allow-Origin',publicBase);res.set('Cache-Control','no-store');
+    next();
+  }
+  app.options(['/api/transfer/ping','/api/transfer/:id/chunks/:index'],cors,(req,res)=>{
+    res.set('Access-Control-Allow-Methods','GET, PUT, OPTIONS');res.set('Access-Control-Allow-Headers','Content-Type, X-Chunk-SHA256, X-AppSpace-Upload-Ticket');res.set('Access-Control-Max-Age','600');res.sendStatus(204);
+  });
+  app.get('/api/transfer/ping',cors,(req,res)=>res.json({ok:true}));
+  app.put('/api/transfer/:id/chunks/:index',cors,route(async(req,res)=>{
+    const session=get(req.params.id),ticket=req.get('X-AppSpace-Upload-Ticket') || '',match=/^(\d{13})\.([a-f0-9]{64})$/.exec(ticket);
+    const expires=Number(match?.[1]);
+    if(!match || !Number.isSafeInteger(expires) || expires<=Date.now() || expires>session.expiresAt || !timingSafeEqual(Buffer.from(match[2],'hex'),Buffer.from(signature(session,expires),'hex')))throw failure('Phiên tải trực tiếp đã hết hạn. Hãy thử lại.',403);
+    await receive(req,res);
   }));
   async function acquire(id,files,work) {
     if(id===undefined || id==='')return null;

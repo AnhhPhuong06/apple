@@ -165,6 +165,22 @@ Trong `.env`, đặt `ADMIN_TOKEN` ít nhất 24 ký tự để chủ động qu
 
 ## Kiểm tra
 
+### Truyền IPA trực tiếp từ client lên VPS
+
+Để thử đường truyền bỏ qua proxy Cloudflare cho IPA, tạo bản ghi DNS **A** tên `upload`, địa chỉ `180.93.114.57`, trạng thái **DNS only** (mây xám), tương ứng `upload.linktructiep.fun`. Website chính vẫn dùng cấu hình proxy hiện tại. [Cloudflare mô tả DNS-only là trả IP gốc và không proxy lưu lượng HTTP/HTTPS](https://developers.cloudflare.com/dns/proxy-status/).
+
+Sau khi DNS trỏ đúng VPS, cài gói bằng hai tên miền:
+
+```bash
+bash /root/appspace-vps/deploy/install-ubuntu.sh linktructiep.fun upload.linktructiep.fun
+```
+
+Installer cấu hình HTTPS cho host upload và `UPLOAD_BASE_URL=https://upload.linktructiep.fun`, giữ dữ liệu và mật khẩu admin. Những lần cập nhật sau chỉ truyền tên miền chính vẫn giữ cấu hình upload đã có. Muốn tắt đường riêng, dùng tham số thứ hai `--no-direct-upload`.
+
+Host upload chỉ proxy `/api/transfer/*`; các đường dẫn khác trả 404. Trình duyệt tạo phiên qua website đã đăng nhập, nhận vé HMAC chỉ dành cho một IPA và hạn tối đa 1 giờ, rồi gửi các phần IPA trực tiếp sang host upload. Cookie admin, mật khẩu và chứng chỉ tiếp tục chỉ gửi đến website chính. CORS chỉ cho phép origin của website chính, mỗi phần vẫn kiểm tra SHA-256 và dung lượng.
+
+Trình duyệt kiểm tra HTTPS/CORS trước khi tải, dùng tối đa 6 luồng ở đường trực tiếp; nếu host riêng không sẵn sàng hoặc lỗi, tự quay về đường website. Phần tiến trình hiện **Tải thẳng lên máy chủ** khi đang dùng đường riêng. Đường mặc định vẫn dùng 3 luồng. Đây là lựa chọn tuyến truyền để tránh một proxy trung gian; không bảo đảm tăng tốc nếu băng thông mạng client hoặc VPS đang là giới hạn. Cần đo tốc độ MB/s từ chính máy client sau khi triển khai để so sánh.
+
 ### Thêm app nhanh
 
 Mở `/admin` → **Thêm app nhanh**, chọn **IPA đã ký sẵn** hoặc **Ký bằng chứng chỉ trong kho**, chọn tối đa 20 IPA và nhấn **Thêm nhanh**. Tên, Bundle ID và phiên bản tự đọc từ từng IPA. Có thể đặt nhà phát triển và danh mục chung cho cả lượt; các giá trị trong mục này giữ nguyên để dùng cho lượt tiếp theo trên trang. Chứng chỉ đã chọn được dùng lại qua ID trong phiên trình duyệt, không đưa mật khẩu vào bộ nhớ trình duyệt.

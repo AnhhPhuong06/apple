@@ -49,6 +49,13 @@ jobs:
           sudo bash /tmp/appspace-package-test/appspace-vps/deploy/install-ubuntu.sh appspace-ci.invalid
           sudo cmp /etc/appspace/admin-password.txt /tmp/original-admin-password
           curl --fail --silent http://127.0.0.1:4173/healthz
+      - name: Verify optional direct-upload host
+        run: |
+          sudo bash /tmp/appspace-package-test/appspace-vps/deploy/install-ubuntu.sh appspace-ci.invalid upload.appspace-ci.invalid
+          sudo grep -Fxq 'UPLOAD_BASE_URL=https://upload.appspace-ci.invalid' /etc/appspace/appspace.env
+          sudo cmp /etc/appspace/admin-password.txt /tmp/original-admin-password
+          curl --fail --silent -H 'Origin: https://appspace-ci.invalid' http://127.0.0.1:4173/api/transfer/ping
+          sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - uses: actions/upload-artifact@v4
         with:
           name: appspace-vps

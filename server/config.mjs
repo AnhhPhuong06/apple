@@ -5,3 +5,8 @@ export function publicOrigin(override,env=process.env) {
   if(url.protocol!=='https:' || url.username || url.password || url.search || url.hash || url.pathname!=='/')throw new Error('PUBLIC_BASE_URL phải là tên miền HTTPS, không có đường dẫn.');
   return url.origin;
 }
+
+export function uploadOrigin(override,env=process.env) {
+  const value=override ?? env.UPLOAD_BASE_URL ?? '';
+  return value?publicOrigin(value,{}):'';
+}

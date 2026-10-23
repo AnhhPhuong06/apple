@@ -5,7 +5,7 @@ umask 022
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 log() { printf '\n[AppSpace] %s\n' "$*"; }
 [[ ${EUID} -eq 0 ]] || die 'Run with sudo: sudo bash deploy/install-ubuntu.sh apps.yourdomain.com'
-[[ $# -eq 1 ]] || die 'Usage: sudo bash deploy/install-ubuntu.sh apps.yourdomain.com'
+[[ $# -ge 1 && $# -le 2 ]] || die 'Usage: sudo bash deploy/install-ubuntu.sh apps.yourdomain.com [upload.yourdomain.com | --no-direct-upload]'
 domain=${1,,}
 [[ ${#domain} -le 253 && "$domain" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]] || die 'Enter a domain name only, for example apps.yourdomain.com (no https:// or path).'
 [[ $(uname -m) == x86_64 ]] || die 'This package requires an x86_64 VPS.'
@@ -19,6 +19,15 @@ install_root=/opt/appspace
 data_root=/var/lib/appspace
 config_dir=/etc/appspace
 config_file=$config_dir/appspace.env
+upload_domain=${2:-}
+if [[ $# -eq 1 && -f "$config_file" ]]; then
+  upload_domain=$(sed -n 's|^UPLOAD_BASE_URL=https://||p' "$config_file")
+fi
+[[ "$upload_domain" != --no-direct-upload ]] || upload_domain=''
+if [[ -n "$upload_domain" ]]; then
+  upload_domain=${upload_domain,,}
+  [[ ${#upload_domain} -le 253 && "$upload_domain" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ && "$upload_domain" != "$domain" ]] || die 'Use a separate upload domain, for example upload.yourdomain.com.'
+fi
 node_version=v24.22.1
 node_archive=node-${node_version}-linux-x64.tar.xz
 node_sha=6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6
@@ -101,6 +110,9 @@ if ! grep -Fxq 'import /etc/caddy/appspace.d/*.caddy' "$caddy_config"; then
   printf '\nimport /etc/caddy/appspace.d/*.caddy\n' >> "$caddy_config"
 fi
 printf '%s {\n    reverse_proxy 127.0.0.1:4173\n}\n' "$domain" > "$caddy_site"
+if [[ -n "$upload_domain" ]]; then
+  printf '\n%s {\n    @transfer path /api/transfer/*\n    handle @transfer {\n        reverse_proxy 127.0.0.1:4173\n    }\n    handle {\n        respond 404\n    }\n}\n' "$upload_domain" >> "$caddy_site"
+fi
 chmod 0644 "$caddy_config" "$caddy_site"
 if ! caddy validate --config "$caddy_config" --adapter caddyfile; then
   [[ ! -f "$caddy_backup/Caddyfile" ]] || cp -a "$caddy_backup/Caddyfile" "$caddy_config"
@@ -114,6 +126,14 @@ previous_release=$(readlink -f "$install_root/current" 2>/dev/null || true)
 if systemctl is-active --quiet appspace; then
   "$node_dir/bin/node" --env-file="$config_file" "$source_dir/deploy/check-idle.mjs" || die 'A signing job started during preparation. Run the installer again after it completes.'
 fi
+cp -a "$config_file" "$caddy_backup/appspace.env"
+if [[ $# -eq 2 ]]; then
+  next_env=$(mktemp "$config_dir/.appspace-env-XXXXXXXX")
+  grep -v '^UPLOAD_BASE_URL=' "$config_file" > "$next_env"
+  if [[ -n "$upload_domain" ]]; then printf 'UPLOAD_BASE_URL=https://%s\n' "$upload_domain" >> "$next_env"; fi
+  chmod 0600 "$next_env"
+  mv -f -- "$next_env" "$config_file"
+fi
 ln -sfn "$release_dir" "$install_root/current"
 install -m 0644 "$release_dir/deploy/appspace.service" /etc/systemd/system/appspace.service
 systemctl daemon-reload
@@ -125,6 +145,7 @@ for ((attempt=0;attempt<30;attempt++)); do
   sleep 1
 done
 if [[ $healthy != true ]]; then
+  cp -a "$caddy_backup/appspace.env" "$config_file"
   if [[ -n "$previous_release" && -d "$previous_release" ]]; then
     ln -sfn "$previous_release" "$install_root/current"
     systemctl restart appspace
@@ -140,3 +161,4 @@ printf 'Admin password: sudo cat /etc/appspace/admin-password.txt\n'
 printf 'App data:       /var/lib/appspace\nStatus:         sudo systemctl status appspace --no-pager\n'
 printf 'Backups of existing Caddy config: %s\n' "$caddy_backup"
 printf 'Keep ports 80/443 reachable. Port 4173 stays private. No firewall rules were changed.\n'
+if [[ -n "$upload_domain" ]]; then printf 'Direct IPA upload: https://%s (set its DNS A record to this VPS, DNS only).\n' "$upload_domain"; fi

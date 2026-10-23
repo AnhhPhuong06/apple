@@ -1,4 +1,4 @@
-import {writeFile,stat,copyFile,rename} from 'node:fs/promises';
+import {readFile,writeFile,stat,copyFile,rename} from 'node:fs/promises';
 import path from 'node:path';
 import {readAppInfo,manifestXML} from './signing.mjs';
 import {prepareAppIcon} from './images.mjs';

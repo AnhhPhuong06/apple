@@ -24,6 +24,14 @@ Trang chủ và `catalog.html` là kho ứng dụng: mỗi app có tên, icon, p
 
 Trong admin, phần **Ứng dụng đã tạo** liệt kê các bản ký đã lưu. Bạn có thể tìm app, mở trang cài và sao chép link; danh sách vẫn có sau khi khởi động lại. Nút **Tạo app mới** xóa thông tin trong biểu mẫu để nhập app tiếp theo, giữ nguyên các bản ký trước. Mỗi lần ký tạo UUID mới, nên ngay cả hai bản cùng tên cũng có link riêng.
 
+## Logo website bằng link ảnh
+
+Trong `/admin`, đến mục **Logo website**, dán link ảnh HTTPS trực tiếp (JPG/JPEG hoặc PNG) rồi nhấn **Lưu logo**. Logo sẽ hiển thị ở đầu và cuối trang admin, kho ứng dụng, trang cài app và trang đăng nhập. Ô xem trước giúp kiểm tra link; nếu ảnh không tải được, trang giữ logo AppSpace mặc định. Để khôi phục, bấm **Dùng logo mặc định** rồi **Lưu logo**.
+
+Cấu hình trên máy chủ nằm trong `DATA_DIR/site-settings.json` và được giữ sau khi khởi động lại. Chỉ admin được lưu cấu hình. Trình duyệt tải ảnh trực tiếp từ link đã nhập, không gửi chứng chỉ hoặc thông tin ký app đến nguồn ảnh. Logo website không thay đổi icon của từng ứng dụng.
+
+Với **GitHub Pages**, bấm **Xuất cấu hình Pages** sau khi lưu. Thay `site-settings.json` ở thư mục gốc repo bằng file tải về rồi commit/push. Hoặc sửa trực tiếp `logoUrl` trong file này thành link ảnh. Pages và máy chủ admin có cấu hình riêng; lưu trên admin không tự push thay đổi lên GitHub.
+
 `setup:signer` tải **zsign v1.1.3** từ kho phát hành chính thức, xác minh SHA-256 trước khi giải nén. Hỗ trợ tự cài trên Windows x64 và Linux x64. Nền tảng khác có thể cài [zsign](https://github.com/zhlynn/zsign/tree/v1.1.3) và đặt `ZSIGN_BIN` đến file thực thi.
 
 ## Quy trình sử dụng

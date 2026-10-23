@@ -9,6 +9,7 @@ import {createAdminAuth} from './auth.mjs';
 import {listPublishedApps} from './catalog.mjs';
 import {prepareAppIcon} from './images.mjs';
 import {publicOrigin} from './config.mjs';
+import {readSiteSettings,saveSiteSettings} from './site-settings.mjs';
 
 export const root=fileURLToPath(new URL('../',import.meta.url));
 export async function createApp(options={}) {
@@ -33,6 +34,11 @@ export async function createApp(options={}) {
   const auth=await createAdminAuth({token,data,baseURL,port,secure:!!configuredBase,root});
   const {admin}=auth;
   auth.mount(app);
+  app.get('/site-settings.json',async(req,res)=>res.set('Cache-Control','no-store').json(await readSiteSettings(data,root)));
+  app.put('/api/admin/site-settings',admin,express.json({limit:'4kb'}),async(req,res,next)=>{
+    try {res.json(await saveSiteSettings(data,req.body));}
+    catch(error){if(error.code)return next(error);res.status(400).json({error:error.message});}
+  });
   app.get('/api/health',admin,(req,res)=>res.json({signerReady,otaReady:!!configuredBase,maxUploadMB:512,busy}));
   app.get('/api/admin/apps',admin,async(req,res)=>res.json({apps:await listPublishedApps(publicRoot)}));
   app.get('/api/apps',async(req,res)=>res.set('Cache-Control','no-store').json({apps:await listPublishedApps(publicRoot)}));
@@ -113,7 +119,7 @@ export async function createApp(options={}) {
       } catch(error) {busy=false;await clearWork(req.work);if(!res.headersSent) res.status(400).json({error:error.message});}
     });
   });
-  const publicFiles=['index.html','appstore.css','app.js','apps.js','shared.js','favicon.svg','sign.css','sign.js','admin-apps.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
+  const publicFiles=['index.html','appstore.css','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','admin-apps.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
   const catalogPage=async(req,res)=>res.set('Cache-Control','no-store').type('html').send((await readFile(path.join(root,'catalog.html'),'utf8')).replace('data-source="static"','data-source="server"'));
   app.get('/',(req,res,next)=>req.query.job || req.query.app?res.sendFile(path.join(root,'index.html')):catalogPage(req,res).catch(next));
   app.get('/catalog.html',catalogPage);

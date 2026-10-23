@@ -63,6 +63,7 @@ Vị trí chính:
 - Mã đang chạy: `/opt/appspace/current`
 - Node.js riêng: `/opt/appspace/node`
 - Dữ liệu app và logo: `/var/lib/appspace`
+- Kho chứng chỉ mã hóa: `/var/lib/appspace/certificates`; khóa: `/var/lib/appspace/certificate-vault.key` (sao lưu cùng kho, không đưa lên GitHub).
 - Biến môi trường: `/etc/appspace/appspace.env` (chỉ root đọc)
 - HTTPS: `/etc/caddy/appspace.d/appspace.caddy`
 - Các release cũ: `/opt/appspace/releases` (giữ lại để khôi phục; dọn thủ công khi cần dung lượng).
@@ -72,6 +73,8 @@ Vị trí chính:
 Đóng gói bản mới, tải lên, giải nén vào thư mục mới và chạy lại installer với **cùng tên miền**. Script giữ mật khẩu, logo, app đã ký; nó kiểm tra không có phiên ký trước khi khởi động lại. Nếu backend mới không sẵn sàng, script trỏ lại release trước.
 
 Từ bản 1.1, admin có hai chế độ thêm app (ký mới hoặc đăng IPA đã ký) và nút **Xóa app** ở danh sách. Khi xóa, IPA, ảnh, manifest và link của bản đó được gỡ khỏi máy chủ. Dấu xóa trong `/var/lib/appspace/deleted-apps` giúp installer không nhập lại app đã gỡ khi cập nhật. Bản sao trên GitHub Pages/Releases cần gỡ riêng.
+
+Từ bản 1.2, **Kho chứng chỉ** lưu bộ `.p12` + `.mobileprovision` và mật khẩu ở dạng mã hóa, hỗ trợ check hạn/khớp hồ sơ/OCSP và chọn lại khi ký. Giữ nguyên toàn bộ `/var/lib/appspace` khi cập nhật; bản sao lưu phải có cả `certificates/` và `certificate-vault.key`. Installer đã cài OpenSSL 3. VPS cần truy cập được máy chủ OCSP Apple để xác minh trạng thái thu hồi; timeout/unknown hiển thị “Chưa xác minh Apple”.
 
 Sao lưu khi không có phiên ký; file backup chứa mật khẩu admin nên giữ riêng:
 

@@ -6,19 +6,22 @@
   const mode=()=>$('input[name="publish-mode"]:checked').value;
   const canSubmit=()=>connected && (mode()==='publish' || ready);
   function updateMode() {
-    const publish=mode()==='publish';
+    const publish=mode()==='publish',saved=!publish && !!$('#saved-certificate').value;
     document.querySelectorAll('[data-sign-only]').forEach(element=>{element.hidden=publish;element.querySelectorAll('input').forEach(input=>input.disabled=publish);});
-    for(const name of ['p12','profile']){const input=form.elements[name];input.disabled=publish;input.required=!publish;input.closest('.file-card').hidden=publish;}
-    $('.upload-grid').classList.toggle('publish-only',publish);$('#publish-note').hidden=!publish;
+    for(const name of ['p12','profile']){const input=form.elements[name];input.disabled=publish || saved;input.required=!publish && !saved;input.closest('.file-card').hidden=publish || saved;}
+    form.elements.password.disabled=publish || saved;form.elements.password.closest('.field-label').hidden=publish || saved;
+    $('#saved-certificate').disabled=publish || active;
+    $('.upload-grid').classList.toggle('publish-only',publish || saved);$('#publish-note').hidden=!publish;
     $('#upload-title').textContent=publish?'Thêm file IPA đã ký':'Thêm ứng dụng & chứng chỉ';
-    $('#upload-description').textContent=publish?'Chọn một IPA để tạo trang cài đặt, không ký lại gói.':'Chọn ba tệp để bắt đầu ký ứng dụng.';
+    $('#upload-description').textContent=publish?'Chọn một IPA để tạo trang cài đặt, không ký lại gói.':saved?'Bộ chứng chỉ đã lưu được chọn. Bạn chỉ cần tải IPA để ký.':'Chọn ba tệp để bắt đầu ký ứng dụng.';
     $('#customize-description').textContent=publish?'Thông tin bên dưới chỉ thay đổi trang giới thiệu, giữ nguyên nội dung IPA.':'Bỏ trống tên, phiên bản và Bundle ID để giữ thông tin gốc.';
     $('#submit-description').textContent=publish?'App sẽ xuất hiện trong kho ứng dụng cùng link cài đặt riêng.':'Ký xong, bạn sẽ nhận link trang cài đặt và file IPA.';
     $('#submit-label').textContent=publish?'Thêm app & tạo trang cài đặt':'Ký & tạo trang cài đặt';
     $('#sign-submit').disabled=!canSubmit() || active;
-    document.querySelectorAll('[name="publish-mode"]').forEach(input=>input.disabled=active);refreshPreview();
+    document.querySelectorAll('[name="publish-mode"]').forEach(input=>input.disabled=active);refreshPreview();window.dispatchEvent(new CustomEvent('appspace:signingstate',{detail:{active}}));
   }
   document.querySelectorAll('[name="publish-mode"]').forEach(input=>input.addEventListener('change',updateMode));
+  $('#saved-certificate').addEventListener('change',updateMode);
   function requireLogin(){const pending=new URLSearchParams(location.search).get('resume') || sessionStorage.getItem('appspace-sign-job');active=false;location.replace('/admin/login'+(/^[0-9a-f-]{36}$/.test(pending || '')?'?resume='+pending:''));}
   function error(message){$('#sign-error').textContent=message;$('#sign-error').hidden=false;}
   function notify(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,4000);}
@@ -26,7 +29,7 @@
   function refreshPreview(){for(const [field,id,fallback] of [['name','live-name','Ứng dụng của bạn'],['subtitle','live-subtitle','Dành cho iPhone & iPad'],['version','live-version','Gốc'],['developer','live-developer','Của bạn'],['description','live-description','Thông tin bạn nhập sẽ xuất hiện tại đây, trên trang cài đặt riêng của ứng dụng.']]) $('#'+id).textContent=form.elements[field].value.trim() || fallback;if(mode()==='publish'){$('#live-name').textContent='Tên từ file IPA';$('#live-version').textContent='Từ IPA';}}
   $('#new-app-button').addEventListener('click',()=>{
     if(active){notify('Hãy chờ phiên ký hiện tại hoàn tất trước khi tạo app mới.');return;}
-    form.reset();if(iconURL)URL.revokeObjectURL(iconURL);iconURL=null;shotURLs.forEach(URL.revokeObjectURL);shotURLs=[];
+    const savedID=$('#saved-certificate').value;form.reset();$('#saved-certificate').value=savedID;if(iconURL)URL.revokeObjectURL(iconURL);iconURL=null;shotURLs.forEach(URL.revokeObjectURL);shotURLs=[];
     $('#screenshot-thumbs').replaceChildren();$('#live-icon').src=$('#custom-icon-preview').src='assets/app-default.svg';
     form.querySelectorAll('.file-card').forEach(card=>{card.classList.remove('has-file');card.querySelector('.file-name').textContent=card.querySelector('input').getAttribute('accept');});
     $('#certificate-password').type='password';$('#show-password').textContent='Hiện';$('#show-password').setAttribute('aria-pressed','false');

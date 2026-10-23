@@ -4,12 +4,14 @@ import {randomUUID} from 'node:crypto';
 import {mkdir,readFile,writeFile,stat,lstat,copyFile,rename,rm,readdir} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {validateArchive,runZsign,signArguments} from './signing.mjs';
+import {validateArchive,readAppInfo,runZsign,signArguments} from './signing.mjs';
 import {createAdminAuth} from './auth.mjs';
 import {listPublishedApps} from './catalog.mjs';
 import {presentationSettings,prepareImages,publishResult} from './publishing.mjs';
 import {publicOrigin} from './config.mjs';
 import {readSiteSettings,saveSiteSettings} from './site-settings.mjs';
+import {createCertificateVault} from './certificate-vault.mjs';
+import {mountCertificateRoutes} from './certificates.mjs';
 
 export const root=fileURLToPath(new URL('../',import.meta.url));
 export async function createApp(options={}) {
@@ -34,6 +36,8 @@ export async function createApp(options={}) {
   const auth=await createAdminAuth({token,data,baseURL,port,secure:!!configuredBase,root});
   const {admin}=auth;
   auth.mount(app);
+  const vault=await createCertificateVault({data,privateRoot,inspector:options.certificateInspector,policy:options.certificatePolicy});
+  mountCertificateRoutes(app,{admin,vault,privateRoot});
   app.get('/site-settings.json',async(req,res)=>res.set('Cache-Control','no-store').json(await readSiteSettings(data,root)));
   app.put('/api/admin/site-settings',admin,express.json({limit:'4kb'}),async(req,res,next)=>{
     try {res.json(await saveSiteSettings(data,req.body));}
@@ -114,13 +118,23 @@ export async function createApp(options={}) {
       try {
         if(error) throw new Error(error instanceof multer.MulterError?'Tệp quá lớn hoặc số lượng tệp vượt giới hạn.':error.message);
         const files=req.files || {}; const body=req.body || {};
-        for(const key of ['ipa','p12','profile']) if(!files[key]?.length) throw new Error('Cần đủ file IPA, chứng chỉ .p12 và hồ sơ .mobileprovision.');
-        if(files.p12[0].size>1024**2 || files.profile[0].size>10*1024**2) throw new Error('Chứng chỉ hoặc hồ sơ có dung lượng quá lớn.');
+        if(!files.ipa?.length)throw new Error('Hãy chọn file IPA để ký ứng dụng.');
         const settings=presentationSettings(body);
-        if(typeof body.password!=='string' || body.password.length>1024 || body.password.includes('\0')) throw new Error('Mật khẩu chứng chỉ không hợp lệ.');
         await prepareImages(files,req.work);
         await validateArchive(files.ipa[0].path);
-        const work=req.work; const password=body.password; delete body.password;
+        let password;
+        if(body.certificateId) {
+          if(typeof body.certificateId!=='string' || files.p12 || files.profile || body.password)throw new Error('Chọn chứng chỉ trong kho hoặc tải chứng chỉ mới, không dùng đồng thời cả hai.');
+          const appInfo=await readAppInfo(files.ipa[0].path);
+          const saved=await vault.materialize(body.certificateId,req.work,settings.bundleId || appInfo.CFBundleIdentifier);
+          files.p12=[{path:saved.p12}];files.profile=[{path:saved.profile}];password=saved.password;
+        }else {
+          for(const key of ['p12','profile'])if(!files[key]?.length)throw new Error('Cần đủ chứng chỉ .p12 và hồ sơ .mobileprovision, hoặc chọn một bộ đã lưu trong kho.');
+          if(files.p12[0].size>1024**2 || files.profile[0].size>10*1024**2)throw new Error('Chứng chỉ hoặc hồ sơ có dung lượng quá lớn.');
+          if(typeof body.password!=='string' || body.password.length>1024 || body.password.includes('\0'))throw new Error('Mật khẩu chứng chỉ không hợp lệ.');
+          password=body.password;
+        }
+        const work=req.work;delete body.password;
         // The accepted job survives a closed browser; sensitive uploads are removed in finally.
         for(const [key,job] of jobs) if(Date.now()-job.createdAt>86400000) jobs.delete(key);
         jobs.set(id,{id,status:'signing',createdAt:Date.now()});
@@ -136,7 +150,7 @@ export async function createApp(options={}) {
       } catch(error) {busy=false;await clearWork(req.work);if(!res.headersSent) res.status(400).json({error:error.message});}
     });
   });
-  const publicFiles=['index.html','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','admin-apps.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
+  const publicFiles=['index.html','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings-admin.js','favicon.svg','sign.css','sign.js','admin-apps.js','certificates-admin.js','catalog.css','catalog.js','admin-login.css','admin-login.js'];
   const catalogPage=async(req,res)=>res.set('Cache-Control','no-store').type('html').send((await readFile(path.join(root,'catalog.html'),'utf8')).replace('data-source="static"','data-source="server"'));
   app.get('/',(req,res,next)=>req.query.job || req.query.app?res.sendFile(path.join(root,'index.html')):catalogPage(req,res).catch(next));
   app.get('/catalog.html',catalogPage);

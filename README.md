@@ -34,6 +34,31 @@ Chỉ admin đã đăng nhập hoặc API có Bearer token hợp lệ được t
 
 Việc xóa áp dụng trên máy chủ đang quản trị. Bản sao đã xuất lên GitHub Pages hoặc Releases cần được gỡ riêng tại repository tương ứng. Máy chủ lưu dấu xóa trong `DATA_DIR/deleted-apps/` để lần cập nhật VPS sau không tự nhập lại app đã gỡ, kể cả khi gói cài còn chứa bản xuất đó.
 
+## Kho chứng chỉ và ký nhanh
+
+Trong `/admin`, mở **Kho chứng chỉ → Lưu bộ chứng chỉ mới**, chọn `.p12`, `.mobileprovision`, nhập mật khẩu `.p12` nếu có và đặt tên dễ nhớ. Bấm **Lưu & kiểm tra chứng chỉ**. Lần ký sau chọn bộ đã lưu ở đầu biểu mẫu, chỉ tải IPA; không cần tải lại chứng chỉ hoặc nhập lại mật khẩu. Lựa chọn được giữ khi tạo app tiếp theo và tải lại tab admin. Chỉ ID bộ đã chọn nằm trong sessionStorage; mật khẩu và nội dung tệp không được lưu trong trình duyệt.
+
+Kho dùng AES-256-GCM để mã hóa toàn bộ `.p12`, hồ sơ, mật khẩu và thông tin kiểm tra trong `DATA_DIR/certificates/*.vault`. Khóa ngẫu nhiên 32 byte nằm riêng tại `DATA_DIR/certificate-vault.key`, quyền 0600 trên Linux. Thư mục kho dùng quyền 0700. API chỉ trả thông tin kiểm tra, không cung cấp tệp chứng chỉ hoặc mật khẩu. Mật khẩu admin có thể đổi mà không đổi khóa kho. Quản trị viên hệ điều hành có quyền đọc cả khóa và kho vẫn có thể giải mã.
+
+**Sao lưu cả DATA_DIR, gồm kho và khóa.** Mất khóa sẽ không thể mở lại chứng chỉ; khi kho còn dữ liệu nhưng khóa bị mất, máy chủ từ chối tạo khóa mới. Gói VPS, GitHub Releases và Pages không chứa kho, khóa hay tệp chứng chỉ. Cập nhật VPS giữ dữ liệu riêng trong `/var/lib/appspace`.
+
+Nút **Check chứng chỉ** kiểm tra:
+
+- Mở được `.p12` bằng mật khẩu và có khóa riêng khớp chứng chỉ.
+- Chứng chỉ thuộc loại ký app iOS, chuỗi tin cậy đến Apple Root CA, còn trong thời hạn.
+- Hồ sơ có chữ ký CMS hợp lệ từ chứng chỉ cấp provisioning profile của Apple; chứng chỉ, Team ID và phạm vi App ID khớp hồ sơ, hồ sơ còn hạn. Hồ sơ App Store không dùng để cài IPA trực tiếp qua website.
+- OCSP tới địa chỉ Apple được cho phép trong chứng chỉ. Phản hồi chỉ được chấp nhận sau khi OpenSSL xác minh chữ ký và thời gian; không bỏ qua xác thực.
+
+**Apple xác nhận tốt** nghĩa là còn hạn, khớp hồ sơ và có phản hồi OCSP hợp lệ mới xác nhận chưa bị thu hồi. **Chưa xác minh Apple** nghĩa là kiểm tra cục bộ đạt nhưng chưa có phản hồi OCSP hợp lệ mới, ví dụ mất mạng, timeout hoặc Apple trả `unknown`; trạng thái này không được gọi là còn sống. **Đã bị thu hồi**, **Đã hết hạn** và **Không hợp lệ** không được dùng ký từ kho. Kết quả tốt được dùng lại tối đa 10 phút (và không quá `nextUpdate`); lúc ký, nếu lần kiểm tra cũ hơn 10 phút, hệ thống kiểm tra lại. Trạng thái chưa xác minh vẫn có thể ký, nhưng không xác nhận khả năng cài/chạy trên thiết bị.
+
+Khi dùng bộ đã lưu, máy chủ kiểm tra Bundle ID của IPA (hoặc Bundle ID bạn muốn đổi) có nằm trong phạm vi hồ sơ trước khi ký. Không tự động xác nhận các entitlement, App Extension hay UDID của mọi iPhone. Chọn **Dùng để ký** từ danh sách để chuyển nhanh về biểu mẫu.
+
+**Xóa khỏi kho** có hộp xác nhận, xóa bản mã của bộ chứng chỉ; không xóa app đã ký hoặc bản sao tạm của phiên đang ký. Bản sao dùng để ký được dọn sau phiên xử lý. Muốn dùng lại bộ đã xóa, cần tải lại tệp gốc.
+
+Cần **OpenSSL 3**. Installer Ubuntu và Dockerfile đã cài OpenSSL; trên Windows có thể dùng OpenSSL kèm Git for Windows hoặc đặt `OPENSSL_BIN` trong `.env`. Các CA công khai được lấy từ [Apple PKI](https://www.apple.com/certificateauthority/) và đóng gói trong `server/apple-pki.json`; không tải CA từ URL do người dùng cung cấp. Tham khảo [cấu trúc provisioning profile](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles), [thu hồi chứng chỉ](https://developer.apple.com/help/account/certificates/revoke-a-certificate/) và [xác minh OCSP của OpenSSL](https://docs.openssl.org/3.0/man1/openssl-ocsp/).
+
+API kho chỉ dành cho admin: `GET/POST /api/admin/certificates`, `POST /api/admin/certificates/:id/check`, `DELETE /api/admin/certificates/:id`. API ký nhận `certificateId` thay cho `.p12`, `.mobileprovision` và mật khẩu khi dùng bộ trong kho. Header bảo vệ phiên cookie vẫn là `X-AppSpace-Admin: 1`.
+
 ## Logo website bằng link ảnh
 
 Trong `/admin`, đến mục **Logo website**, dán link ảnh HTTPS trực tiếp (JPG/JPEG hoặc PNG) rồi nhấn **Lưu logo**. Logo sẽ hiển thị ở đầu và cuối trang admin, kho ứng dụng, trang cài app và trang đăng nhập. Ô xem trước giúp kiểm tra link; nếu ảnh không tải được, trang giữ logo AppSpace mặc định. Để khôi phục, bấm **Dùng logo mặc định** rồi **Lưu logo**.

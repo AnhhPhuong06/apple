@@ -44,6 +44,8 @@ Với **GitHub Pages**, bấm **Xuất cấu hình Pages** sau khi lưu. Thay `s
 
 Tên, phiên bản, Bundle ID và yêu cầu iOS của trang kết quả được đọc từ IPA đầu ra. Manifest dùng `CFBundleVersion` thực tế của gói, kể cả khi khác phiên bản hiển thị. App không có ảnh xem trước hoặc mô tả sẽ ẩn các phần tương ứng; không lấy nội dung Ngọc Rồng của trang mẫu.
 
+`index.html` là mẫu chung, không ghi cứng tên, icon, hình ảnh hay thông tin của một app. Cả `?job=<id>` và `?app=<id>` đều lấy đúng bản ghi tương ứng. Khi không tìm thấy ID, dữ liệu lỗi hoặc mất kết nối, trang báo không tìm thấy ứng dụng; không chuyển sang app khác. Ngọc Rồng Hot chỉ hiển thị khi chọn đúng ID mẫu hoặc dùng `?demo=1` trên bản có dữ liệu mẫu.
+
 ## Cài trực tiếp trên iPhone
 
 Máy chủ phải truy cập được qua **HTTPS**. Sao chép `.env.example` thành `.env`, rồi đặt:

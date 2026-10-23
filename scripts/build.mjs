@@ -8,7 +8,7 @@ if(output !== path.join(root,'_site') || !output.startsWith(root + path.sep)) th
 try { if((await lstat(output)).isSymbolicLink()) throw new Error('Build output may not be a symlink.'); } catch(error) { if(error.code !== 'ENOENT') throw error; }
 await rm(output, {recursive:true,force:true});
 await mkdir(path.join(output,'downloads'), {recursive:true});
-const files = ['index.html','catalog.html','catalog.css','catalog.js','appstore.css','favicon.svg','apps.js','shared.js','app.js','site-logo.js','site-settings.json','.nojekyll','README.md'];
+const files = ['index.html','catalog.html','catalog.css','catalog.js','appstore.css','favicon.svg','apps.js','shared.js','app-data.js','app.js','site-logo.js','site-settings.json','.nojekyll','README.md'];
 for(const file of files) await copyFile(path.join(root,file), path.join(output,file));
 await cp(path.join(root,'assets'), path.join(output,'assets'), {recursive:true});
 const source = await readFile(path.join(root,'apps.js'),'utf8');

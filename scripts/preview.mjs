@@ -17,7 +17,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname.startsWith('/apple/')) pathname = pathname.slice(6);
     if (pathname.endsWith('/')) pathname += 'index.html';
     const relative = pathname.replace(/^\/+/, '');
-    const publicFiles = new Set(['index.html','catalog.html','catalog.css','catalog.js','appstore.css','app.js','apps.js','shared.js','site-logo.js','site-settings.json','favicon.svg','README.md']);
+    const publicFiles = new Set(['index.html','catalog.html','catalog.css','catalog.js','appstore.css','app-data.js','app.js','apps.js','shared.js','site-logo.js','site-settings.json','favicon.svg','README.md']);
     if (!publicFiles.has(relative) && !/^assets\/[\w.-]+\.(png|jpe?g|webp|svg)$/.test(relative) && !/^downloads\/[\w.-]+\.ipa$/.test(relative)) { res.writeHead(404); return res.end('Not found'); }
     if (relative.split(/[\\/]/).some((part) => part.startsWith('.')) || relative.startsWith('scripts/')) { res.writeHead(404); return res.end('Not found'); }
     const file = path.resolve(root, relative);

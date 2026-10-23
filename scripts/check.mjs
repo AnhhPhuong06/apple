@@ -8,7 +8,7 @@ import '../ipa-validator.js';
 import {validateSiteSettings} from '../server/site-settings.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const scripts = ['apps.js','shared.js','app.js','manage.js','sign.js','site-logo.js','site-settings-admin.js','server/site-settings.mjs','admin-apps.js','catalog.js','admin-login.js','server/config.mjs','server/images.mjs','server/catalog.mjs','server/auth.mjs','server/app.mjs','server/index.mjs','server/signing.mjs','ipa-validator.js','scripts/setup-signer.mjs','scripts/preview.mjs','scripts/build.mjs','scripts/export-pages.mjs'];
+const scripts = ['apps.js','shared.js','app-data.js','app.js','manage.js','sign.js','site-logo.js','site-settings-admin.js','server/site-settings.mjs','admin-apps.js','catalog.js','admin-login.js','server/config.mjs','server/images.mjs','server/catalog.mjs','server/auth.mjs','server/app.mjs','server/index.mjs','server/signing.mjs','ipa-validator.js','scripts/setup-signer.mjs','scripts/preview.mjs','scripts/build.mjs','scripts/export-pages.mjs'];
 for(const file of scripts) execFileSync(process.execPath, ['--check', path.join(root,file)], {stdio:'pipe'});
 validateSiteSettings(JSON.parse(await readFile(path.join(root,'site-settings.json'),'utf8')));
 const source = await readFile(path.join(root,'apps.js'),'utf8');

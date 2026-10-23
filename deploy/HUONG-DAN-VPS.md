@@ -71,6 +71,8 @@ Vị trí chính:
 
 Đóng gói bản mới, tải lên, giải nén vào thư mục mới và chạy lại installer với **cùng tên miền**. Script giữ mật khẩu, logo, app đã ký; nó kiểm tra không có phiên ký trước khi khởi động lại. Nếu backend mới không sẵn sàng, script trỏ lại release trước.
 
+Từ bản 1.1, admin có hai chế độ thêm app (ký mới hoặc đăng IPA đã ký) và nút **Xóa app** ở danh sách. Khi xóa, IPA, ảnh, manifest và link của bản đó được gỡ khỏi máy chủ. Dấu xóa trong `/var/lib/appspace/deleted-apps` giúp installer không nhập lại app đã gỡ khi cập nhật. Bản sao trên GitHub Pages/Releases cần gỡ riêng.
+
 Sao lưu khi không có phiên ký; file backup chứa mật khẩu admin nên giữ riêng:
 
 ```bash

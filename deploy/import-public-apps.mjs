@@ -13,6 +13,7 @@ export async function importPublicApps(source,dataDir,origin) {
   for(const entry of entries) {
     if(!entry.isDirectory() || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(entry.name))throw new Error('Unexpected exported app directory.');
     const id=entry.name,destination=path.join(published,id),from=path.join(source,id);
+    try {await lstat(path.join(path.resolve(dataDir),'deleted-apps',id+'.json'));skipped++;continue;}catch(error){if(error.code!=='ENOENT')throw error;}
     try {await lstat(destination);skipped++;continue;}catch(error){if(error.code!=='ENOENT')throw error;}
     const temp=path.join(published,`.import-${randomUUID()}`);await mkdir(temp,{mode:0o700});
     try {

@@ -19,5 +19,9 @@ test('VPS imports signed public apps with new HTTPS URLs and never overwrites an
   const xml=plist.parse(await readFile(path.join(destination,'manifest.plist'),'utf8'));assert.equal(xml.items[0].metadata['bundle-version'],'17');assert.equal(xml.items[0].assets[0].url,record.file);
   assert.deepEqual(await importPublicApps(source,data,'https://other.example.test'),{imported:0,skipped:1});assert.deepEqual(JSON.parse(await readFile(path.join(destination,'app.json'),'utf8')),record);
   await assert.rejects(importPublicApps(source,data,'http://example.test'));
+  await mkdir(path.join(data,'deleted-apps'));await writeFile(path.join(data,'deleted-apps',id+'.json'),JSON.stringify({id,deletedAt:Date.now()}));
+  assert.equal(path.dirname(destination),path.join(data,'published'));await rm(destination,{recursive:true});
+  assert.deepEqual(await importPublicApps(source,data,'https://apps.example.test'),{imported:0,skipped:1});
+  await assert.rejects(readFile(path.join(destination,'app.json')),error=>error.code==='ENOENT');
  }finally {await rm(directory,{recursive:true,force:true});}
 });

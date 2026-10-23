@@ -22,7 +22,17 @@ Trang cài `index.html?job=<id>`, thông tin app, ảnh, manifest và IPA đầu
 
 Trang chủ và `catalog.html` là kho ứng dụng: mỗi app có tên, icon, phiên bản và link cài riêng, hỗ trợ tìm kiếm không dấu, lọc danh mục và sắp xếp. Danh sách chỉ hiển thị app thật đã ký trên máy chủ, hoặc các app đã xuất khi chạy trên Pages. Không có app thì hiển thị trạng thái trống.
 
-Trong admin, phần **Ứng dụng đã tạo** liệt kê các bản ký đã lưu. Bạn có thể tìm app, mở trang cài và sao chép link; danh sách vẫn có sau khi khởi động lại. Nút **Tạo app mới** xóa thông tin trong biểu mẫu để nhập app tiếp theo, giữ nguyên các bản ký trước. Mỗi lần ký tạo UUID mới, nên ngay cả hai bản cùng tên cũng có link riêng.
+Trong admin, phần **Ứng dụng đã tạo** liệt kê các app đã lưu. Bạn có thể tìm app, mở trang cài, sao chép link và xóa app; danh sách vẫn có sau khi khởi động lại. Nút **Thêm app mới** xóa thông tin trong biểu mẫu để nhập app tiếp theo. Mỗi app có UUID và link riêng, kể cả khi trùng tên.
+
+## Thêm và xóa ứng dụng trong admin
+
+- **Ký & thêm app**: giữ luồng ký IPA bằng `.p12` và `.mobileprovision`, có thể đổi tên, Bundle ID hoặc phiên bản trước khi ký.
+- **Thêm IPA đã ký**: chỉ cần IPA, không cần chứng chỉ hay công cụ ký. Tên, phiên bản, Bundle ID và yêu cầu iOS được đọc từ gói; nội dung IPA được giữ nguyên. Bạn có thể bổ sung icon cho trang giới thiệu, mô tả, danh mục và ảnh xem trước. Máy chủ kiểm tra cấu trúc IPA, không xác nhận chữ ký hay khả năng chạy trên thiết bị.
+- **Xóa app**: tại **Ứng dụng đã tạo**, bấm **Xóa app**, kiểm tra tên trong hộp xác nhận rồi chọn **Xóa ứng dụng**. App được gỡ khỏi danh sách công khai và xóa IPA, manifest, ảnh cùng metadata của đúng bản đó. Link tải/cài cũ của bản bị xóa trả về 404; các app khác được giữ lại.
+
+Chỉ admin đã đăng nhập hoặc API có Bearer token hợp lệ được thêm/xóa app. Các API là `POST /api/admin/apps` (multipart: `ipa`, `icon`, `screenshots` và thông tin giới thiệu) và `DELETE /api/admin/apps/:id`. Phiên đăng nhập dùng cookie cần thêm header `X-AppSpace-Admin: 1` cho thao tác ghi. Phiên upload và phiên ký dùng chung giới hạn xử lý một app tại một thời điểm.
+
+Việc xóa áp dụng trên máy chủ đang quản trị. Bản sao đã xuất lên GitHub Pages hoặc Releases cần được gỡ riêng tại repository tương ứng. Máy chủ lưu dấu xóa trong `DATA_DIR/deleted-apps/` để lần cập nhật VPS sau không tự nhập lại app đã gỡ, kể cả khi gói cài còn chứa bản xuất đó.
 
 ## Logo website bằng link ảnh
 
